@@ -82,16 +82,29 @@ const ToastProvider = ({ children }: { children: ReactNode }) => {
     return (
         <ToastContext.Provider value={{ show }}>
             {children}
-            <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+            <style>{`
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                .toast-enter {
+                    animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+            `}</style>
+            <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
                 {toasts.map(t => (
                     <div key={t.id} className={`
-                        pointer-events-auto flex items-center gap-2 px-4 py-3 rounded shadow-lg text-white min-w-[250px] transform transition-all duration-300 ease-in-out
-                        ${t.type === 'success' ? 'bg-green-600' : t.type === 'error' ? 'bg-red-600' : 'bg-blue-600'}
+                        toast-enter pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl text-white min-w-[300px] max-w-md backdrop-blur-md border-l-4
+                        ${t.type === 'success' ? 'bg-stone-800/95 border-green-500' : 
+                          t.type === 'error' ? 'bg-stone-800/95 border-red-500' : 
+                          'bg-stone-800/95 border-blue-500'}
                     `}>
-                        {t.type === 'success' && <CheckCircle size={18} />}
-                        {t.type === 'error' && <XCircle size={18} />}
-                        {t.type === 'info' && <Info size={18} />}
-                        <span className="text-sm font-bold">{t.text}</span>
+                        <div className="shrink-0">
+                            {t.type === 'success' && <CheckCircle size={20} className="text-green-500" />}
+                            {t.type === 'error' && <XCircle size={20} className="text-red-500" />}
+                            {t.type === 'info' && <Info size={20} className="text-blue-500" />}
+                        </div>
+                        <span className="text-sm font-medium tracking-wide text-stone-100">{t.text}</span>
                     </div>
                 ))}
             </div>
