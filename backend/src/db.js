@@ -1,5 +1,6 @@
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
+import bcrypt from 'bcrypt';
 
 let db;
 
@@ -97,11 +98,15 @@ export async function initDB() {
         [c.name, c.req_power, c.gold, c.exp]
       );
     }
-    
-    // Create Admin User
-    // hash for '123456' using a simple hash for demo purposes (production should use bcrypt properly)
-    // Here we store plaintext for simplicity in this generated demo, assuming bcrypt logic in app.js
-    // Note: app.js will handle actual hashing on register, this is a placeholder if you manually insert.
+  }
+
+  // Create Admin User if not exists
+  const admin = await db.get('SELECT * FROM users WHERE username = ?', ['admin']);
+  if (!admin) {
+    console.log('Creating default admin user...');
+    const hashedPassword = await bcrypt.hash('123456', 10);
+    // Give admin lots of gold/tokens for testing
+    await db.run('INSERT INTO users (username, password, gold, tokens) VALUES (?, ?, ?, ?)', ['admin', hashedPassword, 999999, 9999]);
   }
 }
 
