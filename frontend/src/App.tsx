@@ -330,51 +330,51 @@ const Gacha = () => {
     const hasLegendary = result?.some(g => g.stars === 5);
 
     return (
-        <div className="flex flex-col items-center space-y-6 py-4">
-            <h2 className="text-2xl font-bold text-amber-500 flex items-center gap-2">
+        <div className="flex flex-col items-center space-y-4 md:space-y-6 py-2 md:py-4">
+            <h2 className="text-xl md:text-2xl font-bold text-amber-500 flex items-center gap-2">
                 <Sparkles size={24}/> 聚贤庄招募
             </h2>
-            <div className="text-stone-400 text-sm bg-stone-900/50 px-3 py-1 rounded-full border border-stone-700">
+            <div className="text-stone-400 text-xs md:text-sm bg-stone-900/50 px-3 py-1 rounded-full border border-stone-700">
                 保底进度: <span className="text-amber-500 font-bold">{user?.pity_counter}</span>/60
             </div>
             
             {result ? (
-                <div className={`w-full animate-fade-in-up text-center space-y-6 bg-stone-800 p-6 md:p-8 rounded-xl border-2 shadow-2xl relative overflow-hidden ${hasLegendary ? 'border-amber-400/80 shadow-amber-900/50' : 'border-stone-600'}`}>
+                <div className={`w-full animate-fade-in-up text-center space-y-4 md:space-y-6 bg-stone-800 p-4 md:p-8 rounded-xl border-2 shadow-2xl relative overflow-hidden ${hasLegendary ? 'border-amber-400/80 shadow-amber-900/50' : 'border-stone-600'}`}>
                     {hasLegendary && (
                         <div className="absolute inset-0 bg-amber-500/10 animate-pulse pointer-events-none"></div>
                     )}
                     <div className="relative z-10">
-                        <h3 className={`text-2xl font-bold mb-6 ${hasLegendary ? 'text-amber-300 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-stone-300'}`}>
+                        <h3 className={`text-xl md:text-2xl font-bold mb-4 md:mb-6 ${hasLegendary ? 'text-amber-300 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-stone-300'}`}>
                             {hasLegendary ? '✨ 传说降临! ✨' : '招募完成'}
                         </h3>
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-2 gap-2 md:grid-cols-5 md:gap-4 max-h-[60vh] overflow-y-auto scrollbar-hide">
                             {result.map((g, i) => {
                                  const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
                                  const isFiveStar = g.stars === 5;
                                  return (
-                                    <div key={i} className={`flex flex-col items-center p-2 bg-stone-900 rounded-lg border-2 ${style.border} relative overflow-hidden group transform transition-all hover:scale-105 duration-300 ${isFiveStar ? 'shadow-[0_0_15px_rgba(251,191,36,0.4)]' : ''}`}>
+                                    <div key={i} className={`flex flex-col items-center p-2 bg-stone-900 rounded-lg border-2 ${style.border} relative overflow-hidden group transform transition-all duration-300 ${isFiveStar ? 'shadow-[0_0_15px_rgba(251,191,36,0.4)]' : ''}`}>
                                         <div className={`absolute inset-0 opacity-10 ${style.bg}`}></div>
                                         {isFiveStar && <div className="absolute inset-0 bg-gradient-to-t from-amber-500/20 to-transparent animate-pulse"></div>}
                                         <div className="relative w-full aspect-[2/3] overflow-hidden rounded border border-stone-800">
                                             <img src={g.avatar} className="w-full h-full object-cover" />
                                         </div>
-                                        <div className={`text-sm font-bold mt-2 ${style.text} truncate w-full`}>{g.name}</div>
+                                        <div className={`text-xs md:text-sm font-bold mt-2 ${style.text} truncate w-full`}>{g.name}</div>
                                         <div className="flex items-center gap-1 mt-1">
                                             {Array.from({length: g.stars}).map((_, si) => (
-                                                <Star key={si} size={10} className={`${isFiveStar ? 'text-amber-400 fill-amber-400' : 'text-stone-500 fill-stone-500'}`} />
+                                                <Star key={si} size={8} className={`${isFiveStar ? 'text-amber-400 fill-amber-400' : 'text-stone-500 fill-stone-500'}`} />
                                             ))}
                                         </div>
                                     </div>
                                  );
                             })}
                         </div>
-                        <button onClick={() => setResult(null)} className="mt-8 px-10 py-3 bg-stone-700 rounded-full hover:bg-stone-600 text-white font-bold w-full md:w-auto border border-stone-500 active:scale-95 transition">
+                        <button onClick={() => setResult(null)} className="mt-6 md:mt-8 px-8 py-3 bg-stone-700 rounded-full hover:bg-stone-600 text-white font-bold w-full md:w-auto border border-stone-500 active:scale-95 transition text-sm md:text-base">
                             继续招募
                         </button>
                     </div>
                 </div>
             ) : (
-                <div className="w-full max-w-md aspect-square bg-stone-900 rounded-full border-4 border-stone-700 relative flex flex-col items-center justify-center p-8 shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] overflow-hidden">
+                <div className="w-full max-w-[320px] md:max-w-md aspect-square bg-stone-900 rounded-full border-4 border-stone-700 relative flex flex-col items-center justify-center p-8 shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] overflow-hidden shrink-0">
                     {/* Altar Effects */}
                     <div className={`absolute inset-0 border-[10px] border-stone-800 rounded-full ${isSummoning ? 'animate-spin duration-[3s]' : ''}`}>
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-4 bg-stone-600 rounded-full"></div>
@@ -384,7 +384,7 @@ const Gacha = () => {
                     </div>
                     
                     {/* Inner Circle / Portal */}
-                    <div className={`absolute inset-8 rounded-full border-2 border-stone-600 flex items-center justify-center ${isSummoning ? 'bg-amber-900/20 animate-pulse' : 'bg-stone-800'}`}>
+                    <div className={`absolute inset-6 md:inset-8 rounded-full border-2 border-stone-600 flex items-center justify-center ${isSummoning ? 'bg-amber-900/20 animate-pulse' : 'bg-stone-800'}`}>
                          {isSummoning ? (
                              <div className="text-amber-500 animate-bounce">
                                 <Sparkles size={64} className="animate-spin" />
@@ -398,24 +398,24 @@ const Gacha = () => {
 
                     {/* Controls */}
                     {!isSummoning && (
-                        <div className="relative z-10 flex flex-col gap-4 w-full max-w-[200px]">
-                            <button onClick={handleGacha} className="group relative bg-red-800 hover:bg-red-700 text-white font-bold py-3 rounded-lg shadow-lg transform active:scale-95 transition-all overflow-hidden border border-red-600">
+                        <div className="relative z-10 flex flex-col gap-3 w-full max-w-[180px] md:max-w-[200px]">
+                            <button onClick={handleGacha} className="group relative bg-red-800 hover:bg-red-700 text-white font-bold py-2.5 md:py-3 rounded-lg shadow-lg transform active:scale-95 transition-all overflow-hidden border border-red-600">
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                                <span className="flex items-center justify-center gap-2">
-                                    <Gift size={16}/> 单次招募 <span className="text-xs opacity-70 bg-black/30 px-1 rounded">1令</span>
+                                <span className="flex items-center justify-center gap-2 text-sm md:text-base">
+                                    <Gift size={16}/> 单抽 <span className="text-[10px] md:text-xs opacity-70 bg-black/30 px-1 rounded">1令</span>
                                 </span>
                             </button>
-                            <button onClick={handleGachaTen} className="group relative bg-amber-700 hover:bg-amber-600 text-white font-bold py-3 rounded-lg shadow-lg transform active:scale-95 transition-all overflow-hidden border border-amber-500">
+                            <button onClick={handleGachaTen} className="group relative bg-amber-700 hover:bg-amber-600 text-white font-bold py-2.5 md:py-3 rounded-lg shadow-lg transform active:scale-95 transition-all overflow-hidden border border-amber-500">
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                                <span className="flex items-center justify-center gap-2">
-                                    <Sparkles size={16}/> 十连招募 <span className="text-xs opacity-70 bg-black/30 px-1 rounded">10令</span>
+                                <span className="flex items-center justify-center gap-2 text-sm md:text-base">
+                                    <Sparkles size={16}/> 十连 <span className="text-[10px] md:text-xs opacity-70 bg-black/30 px-1 rounded">10令</span>
                                 </span>
                             </button>
                         </div>
                     )}
                     
                     {isSummoning && (
-                        <div className="relative z-10 text-amber-500 font-bold tracking-widest text-lg animate-pulse">
+                        <div className="relative z-10 text-amber-500 font-bold tracking-widest text-base md:text-lg animate-pulse">
                             正在召唤...
                         </div>
                     )}
@@ -625,7 +625,7 @@ const Gallery = () => {
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-1 text-[10px] text-stone-400">
                                         <Gift size={10} className="text-stone-500" />
-                                        <span>招募概率: <span className="text-amber-500 font-bold">{getProb(g.stars)}</span></span>
+                                        <span>获取: <span className="text-amber-500 font-bold">聚贤庄</span> ({getProb(g.stars)})</span>
                                     </div>
                                     
                                     {/* Bonds Mini View */}
