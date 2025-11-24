@@ -1003,11 +1003,17 @@ const Barracks = () => {
 
                                     {/* Bottom: Actions */}
                                     <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-stone-700/50">
-                                        {hasMaterial && (
-                                            <button onClick={() => handleEvolve(g.uid, g.id)} className="px-2 py-1 bg-purple-900/50 hover:bg-purple-800 text-purple-200 rounded text-xs border border-purple-700 flex items-center gap-1 animate-pulse active:scale-95">
-                                                <ChevronUp size={12}/> 进阶
-                                            </button>
-                                        )}
+                                        <button 
+                                            onClick={() => hasMaterial ? handleEvolve(g.uid, g.id) : toast.show('需要相同的武将作为素材才能进阶', 'info')} 
+                                            className={`px-2 py-1 rounded text-xs border flex items-center gap-1 transition ${
+                                                hasMaterial 
+                                                ? 'bg-purple-900/50 hover:bg-purple-800 text-purple-200 border-purple-700 animate-pulse active:scale-95' 
+                                                : 'bg-stone-800 text-stone-600 border-stone-700 opacity-50 cursor-not-allowed'
+                                            }`}
+                                        >
+                                            <ChevronUp size={12}/> 进阶
+                                        </button>
+                                        
                                         <button onClick={() => toggle(g.uid, g.is_in_team)} 
                                             className={`px-3 py-1 rounded text-xs border active:scale-95 transition ${g.is_in_team ? 'border-red-800 text-red-400 bg-red-900/10' : 'border-green-800 text-green-400 bg-green-900/10'}`}>
                                             {g.is_in_team ? '下阵' : '上阵'}
