@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
-import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2 } from 'lucide-react';
+import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, AlertCircle } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS } from './types';
 
 // --- API Service ---
@@ -121,7 +121,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
                     <button onClick={logout} className="p-2 hover:bg-stone-700 rounded"><LogOut size={18} /></button>
                 </div>
             </header>
-            <main className="pb-24 p-4 max-w-4xl mx-auto">
+            <main className="pb-24 p-4 max-w-5xl mx-auto">
                 {children}
             </main>
             <nav className="fixed bottom-0 left-0 w-full bg-stone-900 border-t border-stone-800 flex justify-around p-3 text-xs z-50">
@@ -134,53 +134,6 @@ const Layout = ({ children }: { children: ReactNode }) => {
         </div>
     );
 };
-
-const GeneralCard = ({ general, action, onEquip, onUnequip }: { general: UserGeneral, action?: ReactNode, onEquip: (id:number)=>void, onUnequip: (id:number)=>void }) => (
-    <div className="relative bg-stone-800 rounded-lg overflow-hidden border border-stone-700 shadow-lg group hover:border-amber-600 transition-all">
-        <div className="relative h-48 w-full bg-stone-900">
-            <img src={general.avatar} alt={general.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-            <div className={`absolute top-2 left-2 px-2 py-0.5 text-xs font-bold text-white rounded ${COUNTRY_COLORS[general.country]}`}>
-                {general.country}
-            </div>
-            {general.is_in_team && <div className="absolute top-2 right-2 px-2 py-0.5 text-xs bg-amber-600 text-white rounded font-bold">出战中</div>}
-        </div>
-        <div className="p-3">
-            <div className="flex justify-between items-center mb-2">
-                <h3 className="font-bold text-lg text-amber-100">{general.name}</h3>
-                <div className="flex text-yellow-500 text-xs">{'★'.repeat(general.stars)}</div>
-            </div>
-            <div className="grid grid-cols-2 gap-1 text-xs text-stone-400 mb-3">
-                <span>武: {general.str}</span>
-                <span>智: {general.int}</span>
-                <span>统: {general.ldr}</span>
-                <span>运: {general.luck}</span>
-            </div>
-            
-            {/* Equipment Slots Display */}
-            <div className="flex gap-1 mb-3 h-8">
-                {['weapon', 'armor', 'treasure'].map(type => {
-                    const eq = general.equipments.find(e => e.type === type);
-                    return (
-                        <div key={type} className={`flex-1 rounded border ${eq ? 'border-amber-500 bg-amber-900/30' : 'border-stone-600 bg-stone-800'} flex items-center justify-center text-[10px] text-stone-400`} title={eq?.name}>
-                           {eq ? eq.name.substring(0,2) : type[0].toUpperCase()}
-                        </div>
-                    );
-                })}
-            </div>
-
-            <div className="flex gap-2 mb-2">
-                <button onClick={() => onEquip(general.uid)} className="flex-1 bg-stone-700 hover:bg-stone-600 text-xs py-1 rounded flex justify-center items-center gap-1">
-                    <Zap size={12}/>一键装备
-                </button>
-                <button onClick={() => onUnequip(general.uid)} className="flex-1 bg-stone-700 hover:bg-stone-600 text-xs py-1 rounded flex justify-center items-center gap-1">
-                    <Trash2 size={12}/>卸载
-                </button>
-            </div>
-
-            {action}
-        </div>
-    </div>
-);
 
 // --- Pages ---
 const Login = () => {
@@ -294,7 +247,7 @@ const Gacha = () => {
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                         {result.map((g, i) => (
                             <div key={i} className="flex flex-col items-center p-2 bg-stone-900 rounded border border-stone-700">
-                                <img src={g.avatar} className="w-16 h-16 rounded-full border-2 border-amber-500" />
+                                <img src={g.avatar} className="w-16 h-24 object-cover rounded border-2 border-amber-500" />
                                 <div className="text-sm font-bold mt-1">{g.name}</div>
                                 <div className="text-yellow-500 text-xs">{'★'.repeat(g.stars)}</div>
                             </div>
@@ -319,6 +272,7 @@ const Gacha = () => {
     );
 };
 
+// --- New Barracks View (Koei Style) ---
 const Barracks = () => {
     const { token } = useAuth();
     const [generals, setGenerals] = useState<UserGeneral[]>([]);
@@ -341,7 +295,6 @@ const Barracks = () => {
         if(!token) return;
         await api.autoTeam(token);
         load();
-        alert('已自动组成最强战力队伍');
     };
 
     const handleEquip = async (uid: number) => {
@@ -356,30 +309,123 @@ const Barracks = () => {
         load();
     };
 
+    const team = generals.filter(g => g.is_in_team);
+
     return (
-        <div className="space-y-4">
-            <div className="flex justify-between items-center border-l-4 border-amber-500 pl-3">
-                <h2 className="text-xl font-bold">我的武将</h2>
-                <button onClick={autoTeam} className="bg-amber-700 text-white text-xs px-3 py-2 rounded shadow hover:bg-amber-600 flex items-center gap-1">
-                    <Users size={14}/> 一键组队
+        <div className="space-y-6">
+            {/* 1. Header & Auto Team */}
+            <div className="flex justify-between items-center border-l-4 border-amber-600 pl-4 bg-stone-800/50 p-2 rounded-r">
+                <h2 className="text-xl font-bold text-amber-100">出征部队</h2>
+                <button onClick={autoTeam} className="bg-amber-700 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded shadow flex items-center gap-1 transition">
+                    <Users size={14}/> 一键编制
                 </button>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {generals.map(g => (
-                    <GeneralCard 
-                        key={g.uid} 
-                        general={g} 
-                        onEquip={handleEquip}
-                        onUnequip={handleUnequip}
-                        action={
-                            <button onClick={() => toggle(g.uid, g.is_in_team)} 
-                                className={`w-full py-2 rounded text-sm font-bold ${g.is_in_team ? 'bg-red-900/50 text-red-400 border border-red-900' : 'bg-green-800 text-green-100 hover:bg-green-700'}`}>
-                                {g.is_in_team ? '下阵' : '上阵'}
-                            </button>
-                        } 
-                    />
-                ))}
+
+            {/* 2. Team View (Row) */}
+            <div className="bg-stone-900 border border-stone-700 p-4 rounded-lg shadow-inner overflow-x-auto">
+                <div className="flex gap-4 min-w-max">
+                    {team.length === 0 ? (
+                        <div className="text-stone-500 text-sm italic w-full text-center py-4">暂无武将出战，请在下方列表选择上阵</div>
+                    ) : (
+                        team.map(g => (
+                            <div key={g.uid} className="relative w-24 h-40 bg-stone-800 rounded border border-amber-600/50 flex flex-col shadow-lg shrink-0">
+                                <div className="h-full overflow-hidden relative">
+                                    <img src={g.avatar} className="w-full h-full object-cover" />
+                                    <div className={`absolute top-0 left-0 px-1.5 py-0.5 text-[10px] font-bold text-white ${COUNTRY_COLORS[g.country]}`}>
+                                        {g.country}
+                                    </div>
+                                </div>
+                                <div className="bg-gradient-to-t from-black to-transparent absolute bottom-0 w-full p-1 pt-4">
+                                    <div className="text-white font-bold text-xs text-center drop-shadow-md">{g.name}</div>
+                                    <div className="flex justify-between items-end text-[10px] text-stone-300 px-1 mt-1">
+                                        <span>Lv.{g.level}</span>
+                                        <span className="text-amber-400">{(g.str+g.int+g.ldr)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+
+            {/* 3. General List (Table) */}
+            <div className="bg-stone-800 rounded-lg shadow border border-stone-700 overflow-hidden">
+                <div className="px-4 py-3 bg-stone-800 border-b border-stone-700 font-bold text-stone-300">
+                    武将名鉴 ({generals.length})
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm text-stone-300">
+                        <thead className="bg-stone-900 text-stone-500 text-xs uppercase">
+                            <tr>
+                                <th className="px-4 py-3">武将</th>
+                                <th className="px-4 py-3">属性 (武/智/统)</th>
+                                <th className="px-4 py-3 hidden md:table-cell">装备</th>
+                                <th className="px-4 py-3 text-right">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-700">
+                            {generals.map(g => (
+                                <tr key={g.uid} className={`hover:bg-stone-700/50 transition ${g.is_in_team ? 'bg-amber-900/10' : ''}`}>
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative w-10 h-10 shrink-0">
+                                                <img src={g.avatar} className="w-10 h-10 rounded object-cover border border-stone-500" />
+                                                <div className={`absolute -top-1 -left-1 w-4 h-4 flex items-center justify-center text-[10px] text-white rounded-full ${COUNTRY_COLORS[g.country]}`}>
+                                                    {g.country}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-stone-100 flex items-center gap-1">
+                                                    {g.name}
+                                                    {g.is_in_team && <Shield size={10} className="text-amber-500"/>}
+                                                </div>
+                                                <div className="text-xs text-yellow-600">{'★'.repeat(g.stars)} <span className="text-stone-500 ml-1">Lv.{g.level}</span></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex gap-2 text-xs font-mono">
+                                            <span className="text-red-400" title="武力">{g.str}</span>/
+                                            <span className="text-blue-400" title="智力">{g.int}</span>/
+                                            <span className="text-green-400" title="统率">{g.ldr}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 hidden md:table-cell">
+                                        <div className="flex gap-1">
+                                            {['weapon', 'armor', 'treasure'].map(type => {
+                                                const eq = g.equipments.find(e => e.type === type);
+                                                return (
+                                                    <div key={type} 
+                                                         className={`w-6 h-6 rounded flex items-center justify-center text-[10px] border ${eq ? 'bg-amber-900/40 border-amber-600 text-amber-200' : 'bg-stone-900 border-stone-700 text-stone-600'}`}
+                                                         title={eq ? eq.name : '空'}>
+                                                        {eq ? eq.name[0] : type[0].toUpperCase()}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                        <div className="flex justify-end gap-2">
+                                            <button onClick={() => toggle(g.uid, g.is_in_team)} 
+                                                className={`px-2 py-1 rounded text-xs border ${g.is_in_team ? 'border-red-800 text-red-400 hover:bg-red-900/30' : 'border-green-800 text-green-400 hover:bg-green-900/30'}`}>
+                                                {g.is_in_team ? '下阵' : '上阵'}
+                                            </button>
+                                            <div className="flex border border-stone-600 rounded overflow-hidden">
+                                                <button onClick={() => handleEquip(g.uid)} className="px-2 py-1 bg-stone-700 hover:bg-stone-600 text-amber-500" title="一键装备">
+                                                    <Zap size={14}/>
+                                                </button>
+                                                <div className="w-[1px] bg-stone-600"></div>
+                                                <button onClick={() => handleUnequip(g.uid)} className="px-2 py-1 bg-stone-700 hover:bg-stone-600 text-stone-400" title="一键卸载">
+                                                    <Trash2 size={14}/>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );

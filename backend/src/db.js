@@ -86,17 +86,18 @@ export async function initDB() {
   const count = await db.get('SELECT count(*) as c FROM generals');
   if (count.c === 0) {
     console.log('Seeding Database...');
+    // Using 200x300 for portrait style cards to match Koei style
     const generals = [
-      { name: '关羽', stars: 5, str: 98, int: 75, ldr: 95, luck: 60, country: '蜀', avatar: 'https://picsum.photos/seed/guanyu/200/200', description: '五虎上将之首，义薄云天。' },
-      { name: '曹操', stars: 5, str: 85, int: 96, ldr: 99, luck: 80, country: '魏', avatar: 'https://picsum.photos/seed/caocao/200/200', description: '乱世枭雄，魏武帝。' },
-      { name: '吕布', stars: 5, str: 100, int: 30, ldr: 80, luck: 40, country: '群', avatar: 'https://picsum.photos/seed/lubu/200/200', description: '人中吕布，马中赤兔。' },
-      { name: '周瑜', stars: 5, str: 70, int: 98, ldr: 96, luck: 70, country: '吴', avatar: 'https://picsum.photos/seed/zhouyu/200/200', description: '火烧赤壁，英姿飒爽。' },
-      { name: '赵云', stars: 4, str: 96, int: 70, ldr: 85, luck: 90, country: '蜀', avatar: 'https://picsum.photos/seed/zhaoyun/200/200', description: '常山赵子龙，浑身是胆。' },
-      { name: '张辽', stars: 4, str: 92, int: 80, ldr: 93, luck: 70, country: '魏', avatar: 'https://picsum.photos/seed/zhangliao/200/200', description: '威震逍遥津。' },
-      { name: '甘宁', stars: 4, str: 94, int: 60, ldr: 88, luck: 50, country: '吴', avatar: 'https://picsum.photos/seed/ganning/200/200', description: '百骑劫魏营。' },
-      { name: '廖化', stars: 3, str: 75, int: 60, ldr: 70, luck: 80, country: '蜀', avatar: 'https://picsum.photos/seed/liaohua/200/200', description: '蜀中无大将，廖化作先锋。' },
-      { name: '潘凤', stars: 3, str: 70, int: 40, ldr: 60, luck: 10, country: '群', avatar: 'https://picsum.photos/seed/panfeng/200/200', description: '无双上将。' },
-      { name: '邢道荣', stars: 2, str: 60, int: 30, ldr: 50, luck: 20, country: '群', avatar: 'https://picsum.photos/seed/xingdaorong/200/200', description: '零陵上将。' },
+      { name: '关羽', stars: 5, str: 98, int: 75, ldr: 95, luck: 60, country: '蜀', avatar: 'https://picsum.photos/seed/guanyu_v2/200/300', description: '五虎上将之首，义薄云天。' },
+      { name: '曹操', stars: 5, str: 85, int: 96, ldr: 99, luck: 80, country: '魏', avatar: 'https://picsum.photos/seed/caocao_v2/200/300', description: '乱世枭雄，魏武帝。' },
+      { name: '吕布', stars: 5, str: 100, int: 30, ldr: 80, luck: 40, country: '群', avatar: 'https://picsum.photos/seed/lubu_v2/200/300', description: '人中吕布，马中赤兔。' },
+      { name: '周瑜', stars: 5, str: 70, int: 98, ldr: 96, luck: 70, country: '吴', avatar: 'https://picsum.photos/seed/zhouyu_v2/200/300', description: '火烧赤壁，英姿飒爽。' },
+      { name: '赵云', stars: 4, str: 96, int: 70, ldr: 85, luck: 90, country: '蜀', avatar: 'https://picsum.photos/seed/zhaoyun_v2/200/300', description: '常山赵子龙，浑身是胆。' },
+      { name: '张辽', stars: 4, str: 92, int: 80, ldr: 93, luck: 70, country: '魏', avatar: 'https://picsum.photos/seed/zhangliao_v2/200/300', description: '威震逍遥津。' },
+      { name: '甘宁', stars: 4, str: 94, int: 60, ldr: 88, luck: 50, country: '吴', avatar: 'https://picsum.photos/seed/ganning_v2/200/300', description: '百骑劫魏营。' },
+      { name: '廖化', stars: 3, str: 75, int: 60, ldr: 70, luck: 80, country: '蜀', avatar: 'https://picsum.photos/seed/liaohua_v2/200/300', description: '蜀中无大将，廖化作先锋。' },
+      { name: '潘凤', stars: 3, str: 70, int: 40, ldr: 60, luck: 10, country: '群', avatar: 'https://picsum.photos/seed/panfeng_v2/200/300', description: '无双上将。' },
+      { name: '邢道荣', stars: 2, str: 60, int: 30, ldr: 50, luck: 20, country: '群', avatar: 'https://picsum.photos/seed/xingdaorong_v2/200/300', description: '零陵上将。' },
     ];
 
     for (const g of generals) {
