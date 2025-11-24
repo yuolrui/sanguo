@@ -1,10 +1,9 @@
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
-import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift } from 'lucide-react';
+import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Shield, Zap, Trash2 } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS } from './types';
 
 // --- API Service ---
-// Changed to relative path. Nginx or Vite Proxy will handle the forwarding to port 3000.
 const API_URL = '/api';
 
 const api = {
@@ -28,6 +27,10 @@ const api = {
         const res = await fetch(`${API_URL}/gacha`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
         return res.json();
     },
+    gachaTen: async (token: string) => {
+        const res = await fetch(`${API_URL}/gacha/ten`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+        return res.json();
+    },
     getCampaigns: async (token: string) => {
         const res = await fetch(`${API_URL}/campaigns`, { headers: { 'Authorization': `Bearer ${token}` } });
         return res.json();
@@ -40,8 +43,20 @@ const api = {
         const res = await fetch(`${API_URL}/team`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ generalUid, action }) });
         return res.json();
     },
+    autoTeam: async (token: string) => {
+        const res = await fetch(`${API_URL}/team/auto`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+        return res.json();
+    },
     signin: async (token: string) => {
         const res = await fetch(`${API_URL}/signin`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+        return res.json();
+    },
+    autoEquip: async (token: string, generalUid: number) => {
+        const res = await fetch(`${API_URL}/equip/auto`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ generalUid }) });
+        return res.json();
+    },
+    unequipAll: async (token: string, generalUid: number) => {
+        const res = await fetch(`${API_URL}/equip/unequip`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ generalUid }) });
         return res.json();
     }
 };
@@ -120,7 +135,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
     );
 };
 
-const GeneralCard = ({ general, action }: { general: UserGeneral, action?: ReactNode }) => (
+const GeneralCard = ({ general, action, onEquip, onUnequip }: { general: UserGeneral, action?: ReactNode, onEquip: (id:number)=>void, onUnequip: (id:number)=>void }) => (
     <div className="relative bg-stone-800 rounded-lg overflow-hidden border border-stone-700 shadow-lg group hover:border-amber-600 transition-all">
         <div className="relative h-48 w-full bg-stone-900">
             <img src={general.avatar} alt={general.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
@@ -140,6 +155,28 @@ const GeneralCard = ({ general, action }: { general: UserGeneral, action?: React
                 <span>统: {general.ldr}</span>
                 <span>运: {general.luck}</span>
             </div>
+            
+            {/* Equipment Slots Display */}
+            <div className="flex gap-1 mb-3 h-8">
+                {['weapon', 'armor', 'treasure'].map(type => {
+                    const eq = general.equipments.find(e => e.type === type);
+                    return (
+                        <div key={type} className={`flex-1 rounded border ${eq ? 'border-amber-500 bg-amber-900/30' : 'border-stone-600 bg-stone-800'} flex items-center justify-center text-[10px] text-stone-400`} title={eq?.name}>
+                           {eq ? eq.name.substring(0,2) : type[0].toUpperCase()}
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="flex gap-2 mb-2">
+                <button onClick={() => onEquip(general.uid)} className="flex-1 bg-stone-700 hover:bg-stone-600 text-xs py-1 rounded flex justify-center items-center gap-1">
+                    <Zap size={12}/>一键装备
+                </button>
+                <button onClick={() => onUnequip(general.uid)} className="flex-1 bg-stone-700 hover:bg-stone-600 text-xs py-1 rounded flex justify-center items-center gap-1">
+                    <Trash2 size={12}/>卸载
+                </button>
+            </div>
+
             {action}
         </div>
     </div>
@@ -228,15 +265,23 @@ const Dashboard = () => {
 
 const Gacha = () => {
     const { token, refreshUser, user } = useAuth();
-    const [result, setResult] = useState<General | null>(null);
+    const [result, setResult] = useState<General[] | null>(null);
 
     const handleGacha = async () => {
         if (!token) return;
         const res = await api.gacha(token);
         if (res.error) return alert(res.error);
-        setResult(res.general);
+        setResult([res.general]);
         refreshUser();
     };
+
+    const handleGachaTen = async () => {
+        if (!token) return;
+        const res = await api.gachaTen(token);
+        if (res.error) return alert(res.error);
+        setResult(res.generals);
+        refreshUser();
+    }
 
     return (
         <div className="flex flex-col items-center space-y-8 py-8">
@@ -244,20 +289,30 @@ const Gacha = () => {
             <div className="text-stone-400 text-sm">保底进度: {user?.pity_counter}/60 (60抽必出5星)</div>
             
             {result ? (
-                <div className="animate-fade-in-up text-center space-y-4 bg-stone-800 p-6 rounded-xl border border-amber-500/50 shadow-2xl">
+                <div className="w-full animate-fade-in-up text-center space-y-4 bg-stone-800 p-6 rounded-xl border border-amber-500/50 shadow-2xl">
                     <h3 className="text-xl text-amber-300">招募成功!</h3>
-                    <img src={result.avatar} className="w-32 h-32 rounded-full border-4 border-amber-500 mx-auto" />
-                    <div className="text-2xl font-bold">{result.name}</div>
-                    <div className="text-yellow-500">{'★'.repeat(result.stars)}</div>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        {result.map((g, i) => (
+                            <div key={i} className="flex flex-col items-center p-2 bg-stone-900 rounded border border-stone-700">
+                                <img src={g.avatar} className="w-16 h-16 rounded-full border-2 border-amber-500" />
+                                <div className="text-sm font-bold mt-1">{g.name}</div>
+                                <div className="text-yellow-500 text-xs">{'★'.repeat(g.stars)}</div>
+                            </div>
+                        ))}
+                    </div>
                     <button onClick={() => setResult(null)} className="px-6 py-2 bg-stone-700 rounded hover:bg-stone-600 mt-4">继续</button>
                 </div>
             ) : (
-                <div className="w-full max-w-sm h-80 bg-stone-800 rounded-xl border-2 border-dashed border-stone-700 flex flex-col items-center justify-center p-8 text-center space-y-4">
+                <div className="w-full max-w-sm bg-stone-800 rounded-xl border-2 border-dashed border-stone-700 flex flex-col items-center justify-center p-8 text-center space-y-4">
                     <div className="text-6xl animate-bounce">🧧</div>
-                    <p className="text-stone-500">消耗 1 招募令</p>
-                    <button onClick={handleGacha} className="bg-red-700 hover:bg-red-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transform hover:scale-105 transition-all">
-                        招募武将
-                    </button>
+                    <div className="flex flex-col gap-2 w-full">
+                        <button onClick={handleGacha} className="bg-red-700 hover:bg-red-600 text-white font-bold py-3 rounded-lg shadow-lg transform hover:scale-105 transition-all">
+                            单次招募 (1令)
+                        </button>
+                        <button onClick={handleGachaTen} className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg shadow-lg transform hover:scale-105 transition-all">
+                            十连招募 (10令)
+                        </button>
+                    </div>
                 </div>
             )}
         </div>
@@ -268,23 +323,55 @@ const Barracks = () => {
     const { token } = useAuth();
     const [generals, setGenerals] = useState<UserGeneral[]>([]);
 
-    useEffect(() => {
+    const load = () => {
         if (token) api.getMyGenerals(token).then(setGenerals);
+    };
+
+    useEffect(() => {
+        load();
     }, [token]);
 
     const toggle = async (uid: number, isIn: boolean) => {
         if(!token) return;
         await api.toggleTeam(token, uid, isIn ? 'remove' : 'add');
-        const updated = await api.getMyGenerals(token);
-        setGenerals(updated);
+        load();
+    };
+
+    const autoTeam = async () => {
+        if(!token) return;
+        await api.autoTeam(token);
+        load();
+        alert('已自动组成最强战力队伍');
+    };
+
+    const handleEquip = async (uid: number) => {
+        if(!token) return;
+        await api.autoEquip(token, uid);
+        load();
+    };
+
+    const handleUnequip = async (uid: number) => {
+        if(!token) return;
+        await api.unequipAll(token, uid);
+        load();
     };
 
     return (
         <div className="space-y-4">
-            <h2 className="text-xl font-bold border-l-4 border-amber-500 pl-3">我的武将</h2>
+            <div className="flex justify-between items-center border-l-4 border-amber-500 pl-3">
+                <h2 className="text-xl font-bold">我的武将</h2>
+                <button onClick={autoTeam} className="bg-amber-700 text-white text-xs px-3 py-2 rounded shadow hover:bg-amber-600 flex items-center gap-1">
+                    <Users size={14}/> 一键组队
+                </button>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {generals.map(g => (
-                    <GeneralCard key={g.uid} general={g} 
+                    <GeneralCard 
+                        key={g.uid} 
+                        general={g} 
+                        onEquip={handleEquip}
+                        onUnequip={handleUnequip}
                         action={
                             <button onClick={() => toggle(g.uid, g.is_in_team)} 
                                 className={`w-full py-2 rounded text-sm font-bold ${g.is_in_team ? 'bg-red-900/50 text-red-400 border border-red-900' : 'bg-green-800 text-green-100 hover:bg-green-700'}`}>
@@ -311,7 +398,7 @@ const CampaignPage = () => {
         const res = await api.battle(token, id);
         if(res.error) return alert(res.error);
         if(res.win) {
-            alert(`胜利! 获得金币 ${res.rewards.gold}`);
+            alert(`胜利! 获得金币 ${res.rewards.gold} ${Math.random() < 0.2 ? '(掉落了装备!)' : ''}`);
             const updated = await api.getCampaigns(token);
             setCampaigns(updated);
             refreshUser();
@@ -356,7 +443,7 @@ export default function App() {
                     <Route path="/gacha" element={<Layout><Gacha /></Layout>} />
                     <Route path="/barracks" element={<Layout><Barracks /></Layout>} />
                     <Route path="/campaign" element={<Layout><CampaignPage /></Layout>} />
-                    <Route path="/inventory" element={<Layout><div className="text-center p-10 text-stone-500">仓库暂空</div></Layout>} />
+                    <Route path="/inventory" element={<Layout><div className="text-center p-10 text-stone-500">装备在军营中管理</div></Layout>} />
                 </Routes>
             </AuthProvider>
         </HashRouter>

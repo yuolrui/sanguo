@@ -19,11 +19,25 @@ export interface General {
     description: string;
 }
 
+export interface Equipment {
+    id: number; // db ID of equipment type
+    name: string;
+    type: 'weapon' | 'armor' | 'treasure';
+    stat_bonus: number;
+    stars: number;
+}
+
+export interface UserEquipment extends Equipment {
+    id: number; // unique instance ID
+    level: number;
+}
+
 export interface UserGeneral extends General {
     uid: number; // Instance ID
     level: number;
     exp: number;
     is_in_team: boolean;
+    equipments: UserEquipment[];
 }
 
 export interface Campaign {

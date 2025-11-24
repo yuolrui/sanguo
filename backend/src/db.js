@@ -47,6 +47,24 @@ export async function initDB() {
       FOREIGN KEY(general_id) REFERENCES generals(id)
     );
 
+    CREATE TABLE IF NOT EXISTS equipments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      type TEXT, -- weapon, armor, treasure
+      stat_bonus INTEGER, -- 主属性加成值
+      stars INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS user_equipments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      equipment_id INTEGER,
+      general_id INTEGER, -- 当前装备在哪位武将身上 (user_generals.id), NULL表示在仓库
+      level INTEGER DEFAULT 1,
+      FOREIGN KEY(user_id) REFERENCES users(id),
+      FOREIGN KEY(equipment_id) REFERENCES equipments(id)
+    );
+
     CREATE TABLE IF NOT EXISTS campaigns (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT,
@@ -99,6 +117,33 @@ export async function initDB() {
         `INSERT INTO campaigns (name, req_power, gold_drop, exp_drop) VALUES (?,?,?,?)`,
         [c.name, c.req_power, c.gold, c.exp]
       );
+    }
+    
+    // Seed Equipment
+    const equipments = [
+        { name: '青龙偃月刀', type: 'weapon', stat_bonus: 50, stars: 5 },
+        { name: '丈八蛇矛', type: 'weapon', stat_bonus: 48, stars: 5 },
+        { name: '倚天剑', type: 'weapon', stat_bonus: 45, stars: 5 },
+        { name: '烂银枪', type: 'weapon', stat_bonus: 30, stars: 4 },
+        { name: '古锭刀', type: 'weapon', stat_bonus: 28, stars: 4 },
+        { name: '铁脊蛇矛', type: 'weapon', stat_bonus: 20, stars: 3 },
+        { name: '铁剑', type: 'weapon', stat_bonus: 10, stars: 2 },
+        
+        { name: '兽面吞头铠', type: 'armor', stat_bonus: 40, stars: 5 },
+        { name: '明光铠', type: 'armor', stat_bonus: 35, stars: 4 },
+        { name: '锁子甲', type: 'armor', stat_bonus: 20, stars: 3 },
+        { name: '皮甲', type: 'armor', stat_bonus: 10, stars: 2 },
+
+        { name: '赤兔马', type: 'treasure', stat_bonus: 40, stars: 5 },
+        { name: '的卢', type: 'treasure', stat_bonus: 35, stars: 4 },
+        { name: '玉玺', type: 'treasure', stat_bonus: 50, stars: 5 },
+        { name: '孟德新书', type: 'treasure', stat_bonus: 30, stars: 4 },
+    ];
+    for (const e of equipments) {
+        await db.run(
+            `INSERT INTO equipments (name, type, stat_bonus, stars) VALUES (?,?,?,?)`,
+            [e.name, e.type, e.stat_bonus, e.stars]
+        );
     }
   }
 
