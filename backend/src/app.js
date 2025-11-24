@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
+import bcryptjs from 'bcryptjs';
 import { initDB, getDB } from './db.js';
 
 const app = express();
@@ -28,7 +28,7 @@ const authenticateToken = (req, res, next) => {
 app.post('/api/register', async (req, res) => {
   const { username, password } = req.body;
   const db = getDB();
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const hashedPassword = await bcryptjs.hash(password, 10);
   
   try {
     const result = await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [username, hashedPassword]);
@@ -45,7 +45,7 @@ app.post('/api/login', async (req, res) => {
   const db = getDB();
   const user = await db.get('SELECT * FROM users WHERE username = ?', [username]);
   
-  if (user && await bcrypt.compare(password, user.password)) {
+  if (user && await bcryptjs.compare(password, user.password)) {
     const token = jwt.sign({ id: user.id, username: user.username, role: username === 'admin' ? 'admin' : 'user' }, SECRET_KEY);
     res.json({ token, role: user.username === 'admin' ? 'admin' : 'user' });
   } else {

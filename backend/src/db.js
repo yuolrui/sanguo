@@ -1,6 +1,6 @@
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
-import bcrypt from 'bcryptjs';
+import bcryptjs from 'bcryptjs';
 
 let db;
 
@@ -103,19 +103,23 @@ export async function initDB() {
   }
 
   // Force Ensure Admin User Exists with Known Password
-  console.log('Creating/Resetting admin user (admin/123456)...');
-  const hashedPassword = await bcrypt.hash('123456', 10);
-  
-  const existingAdmin = await db.get('SELECT * FROM users WHERE username = ?', ['admin']);
-  
-  if (existingAdmin) {
-      // Reset password if exists
-      await db.run('UPDATE users SET password = ?, gold = 999999, tokens = 9999 WHERE username = ?', [hashedPassword, 'admin']);
-  } else {
-      // Create if not exists
-      await db.run('INSERT INTO users (username, password, gold, tokens) VALUES (?, ?, ?, ?)', ['admin', hashedPassword, 999999, 9999]);
+  try {
+    console.log('Creating/Resetting admin user (admin/123456)...');
+    const hashedPassword = await bcryptjs.hash('123456', 10);
+    
+    const existingAdmin = await db.get('SELECT * FROM users WHERE username = ?', ['admin']);
+    
+    if (existingAdmin) {
+        // Reset password if exists
+        await db.run('UPDATE users SET password = ?, gold = 999999, tokens = 9999 WHERE username = ?', [hashedPassword, 'admin']);
+    } else {
+        // Create if not exists
+        await db.run('INSERT INTO users (username, password, gold, tokens) VALUES (?, ?, ?, ?)', ['admin', hashedPassword, 999999, 9999]);
+    }
+    console.log('Admin user ensured.');
+  } catch (error) {
+    console.error("Error creating admin user:", error);
   }
-  console.log('Admin user ensured.');
 }
 
 export function getDB() {

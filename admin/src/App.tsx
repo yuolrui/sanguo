@@ -11,7 +11,7 @@ export default function AdminApp() {
     
     // Login Form State
     const [username, setUsername] = useState('admin');
-    const [password, setPassword] = useState('123456');
+    const [password, setPassword] = useState(''); // Empty by default
 
     // Add General State
     const [newG, setNewG] = useState({ name: '', stars: 3, str: 50, int: 50, ldr: 50, luck: 50, country: '群', avatar: 'https://picsum.photos/200', description: '' });
@@ -72,7 +72,6 @@ export default function AdminApp() {
                     <input className="block w-full border p-2 mb-2" placeholder="Username" value={username} onChange={e=>setUsername(e.target.value)} />
                     <input className="block w-full border p-2 mb-4" type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} />
                     <button onClick={login} className="w-full bg-blue-600 text-white p-2 rounded">登录</button>
-                    <p className="text-xs text-gray-500 mt-2">默认: admin / 123456 (需先注册或数据库预设)</p>
                 </div>
             </div>
         );
