@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
-import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star, Box } from 'lucide-react';
+import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star, Box, Compass } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS, STAR_STYLES, Equipment } from './types';
 
 // --- API Service ---
@@ -115,7 +115,7 @@ const ToastProvider = ({ children }: { children: ReactNode }) => {
                     to { transform: rotate(360deg); }
                 }
                 .animate-spin-slow {
-                    animation: spin-slow 10s linear infinite;
+                    animation: spin-slow 12s linear infinite;
                 }
                 @keyframes pulse-glow {
                     0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); }
@@ -378,21 +378,32 @@ const Gacha = () => {
     const hasLegendary = result?.some(g => g.stars === 5);
 
     return (
-        <div className="flex flex-col items-center space-y-4 md:space-y-6 py-2 md:py-4 relative">
-            {/* Screen Flash Overlay */}
-            {phase === 'flash' && (
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-160px)] py-4 relative overflow-hidden">
+             {/* Screen Flash Overlay */}
+             {phase === 'flash' && (
                 <div className="fixed inset-0 z-[100] bg-white animate-flash pointer-events-none"></div>
             )}
 
-            <h2 className="text-xl md:text-2xl font-bold text-amber-500 flex items-center gap-2">
-                <Sparkles size={24}/> 聚贤庄招募
-            </h2>
-            <div className="text-stone-400 text-xs md:text-sm bg-stone-900/50 px-3 py-1 rounded-full border border-stone-700">
-                保底进度: <span className="text-amber-500 font-bold">{user?.pity_counter}</span>/60
-            </div>
-            
-            {phase === 'reveal' && result ? (
-                <div className={`w-full animate-fade-in-up text-center space-y-4 md:space-y-6 bg-stone-800 p-4 md:p-8 rounded-xl border-2 shadow-2xl relative overflow-hidden ${hasLegendary ? 'border-amber-400/80 shadow-amber-900/50' : 'border-stone-600'}`}>
+             {/* Header Section */}
+             <div className={`text-center mb-8 relative z-10 transition-opacity duration-500 ${phase !== 'idle' ? 'opacity-50' : 'opacity-100'}`}>
+                <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-300 animate-pulse drop-shadow-sm flex items-center justify-center gap-2">
+                    <Sparkles className="text-amber-400" /> 聚贤庄 <Sparkles className="text-amber-400" />
+                </h2>
+                <div className="mt-4 inline-flex items-center gap-3 bg-stone-900/80 px-4 py-1.5 rounded-full border border-stone-700 shadow-inner backdrop-blur-sm">
+                    <span className="text-stone-400 text-xs uppercase tracking-wider font-bold">保底进度</span>
+                    <div className="w-24 h-2 bg-stone-800 rounded-full overflow-hidden border border-stone-700/50">
+                        <div 
+                            className="h-full bg-amber-600 transition-all duration-500 ease-out shadow-[0_0_10px_rgba(245,158,11,0.5)]" 
+                            style={{ width: `${(user?.pity_counter || 0) / 60 * 100}%` }}
+                        ></div>
+                    </div>
+                    <span className="text-amber-500 font-mono font-bold text-xs">{user?.pity_counter}/60</span>
+                </div>
+             </div>
+
+             {/* Main Altar Area */}
+             {phase === 'reveal' && result ? (
+                 <div className={`w-full max-w-2xl animate-fade-in-up text-center space-y-4 md:space-y-6 bg-stone-800/90 backdrop-blur-md p-4 md:p-8 rounded-xl border-2 shadow-2xl relative overflow-hidden ${hasLegendary ? 'border-amber-400/80 shadow-amber-900/50' : 'border-stone-600'}`}>
                     {hasLegendary && (
                         <div className="absolute inset-0 bg-amber-500/10 animate-pulse pointer-events-none"></div>
                     )}
@@ -426,61 +437,89 @@ const Gacha = () => {
                         </button>
                     </div>
                 </div>
-            ) : (
-                <div className="w-[300px] h-[300px] md:w-[350px] md:h-[350px] bg-stone-900/50 rounded-full border-4 border-stone-700 relative flex flex-col items-center justify-center p-8 shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] overflow-hidden shrink-0 transition-all duration-300">
+             ) : (
+                 // Altar View
+                 <div className="relative w-72 h-72 md:w-80 md:h-80 flex items-center justify-center transition-all duration-500">
+                    {/* Background Layers */}
+                    <div className="absolute inset-0 bg-stone-900/40 rounded-full blur-3xl"></div>
                     
-                    {/* Altar Effects */}
-                    <div className={`absolute inset-0 rounded-full border-[2px] border-stone-700/50 ${phase === 'charging' ? 'animate-spin-slow' : ''}`}></div>
-                    <div className={`absolute inset-2 rounded-full border-[1px] border-stone-800 ${phase === 'charging' ? 'animate-spin duration-[2s] direction-reverse' : ''}`}></div>
+                    {/* Magic Circles */}
+                    {/* Outer Rotating Ring */}
+                    <div className={`absolute inset-0 border-[3px] border-dashed border-stone-700/30 rounded-full ${phase === 'charging' ? 'animate-spin-slow duration-[3s]' : 'animate-spin-slow'}`}></div>
                     
-                    {/* Glowing Runes */}
-                    <div className={`absolute inset-0 flex items-center justify-center ${phase === 'charging' ? 'animate-spin duration-[3s]' : 'opacity-30'}`}>
-                         <div className="absolute top-4 w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_10px_orange]"></div>
-                         <div className="absolute bottom-4 w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_10px_orange]"></div>
-                         <div className="absolute left-4 w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_10px_orange]"></div>
-                         <div className="absolute right-4 w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_10px_orange]"></div>
-                    </div>
-                    
-                    {/* Inner Circle / Portal */}
-                    <div className={`relative z-10 w-32 h-32 md:w-40 md:h-40 rounded-full border-2 border-stone-600 flex items-center justify-center transition-all duration-500 
-                        ${phase === 'charging' ? 'bg-amber-900/40 animate-shake-hard border-amber-500 shadow-[0_0_40px_rgba(245,158,11,0.6)]' : 'bg-stone-800'}
-                    `}>
-                         {phase === 'charging' ? (
-                             <div className="text-amber-500">
-                                <Sparkles size={64} className="animate-spin" />
-                             </div>
-                         ) : (
-                             <div className="text-stone-600">
-                                <Users size={64} opacity={0.2} />
-                             </div>
-                         )}
+                    {/* Middle Ring with Runes */}
+                    <div className={`absolute inset-4 border border-stone-600/50 rounded-full flex items-center justify-center ${phase === 'charging' ? 'animate-spin duration-[3s]' : 'rotate-45 transition-transform duration-[20s]'}`}>
+                        <div className="absolute top-0 w-3 h-3 bg-stone-800 border border-stone-600 rounded-full transform -translate-y-1/2"></div>
+                        <div className="absolute bottom-0 w-3 h-3 bg-stone-800 border border-stone-600 rounded-full transform translate-y-1/2"></div>
+                        <div className="absolute left-0 w-3 h-3 bg-stone-800 border border-stone-600 rounded-full transform -translate-x-1/2"></div>
+                        <div className="absolute right-0 w-3 h-3 bg-stone-800 border border-stone-600 rounded-full transform translate-x-1/2"></div>
                     </div>
 
-                    {/* Controls */}
-                    {phase === 'idle' && (
-                        <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-3 z-20 px-4">
-                            <button onClick={() => performGacha(false)} className="flex-1 max-w-[120px] bg-gradient-to-b from-red-700 to-red-900 hover:from-red-600 hover:to-red-800 text-white font-bold py-2 rounded-lg shadow-lg transform active:scale-95 transition-all border border-red-500/50">
-                                <span className="flex flex-col items-center justify-center text-xs">
-                                    <span className="flex items-center gap-1 text-sm"><Gift size={14}/> 单抽</span>
-                                    <span className="opacity-70 scale-90">1令</span>
-                                </span>
-                            </button>
-                            <button onClick={() => performGacha(true)} className="flex-1 max-w-[120px] bg-gradient-to-b from-amber-600 to-amber-800 hover:from-amber-500 hover:to-amber-700 text-white font-bold py-2 rounded-lg shadow-lg transform active:scale-95 transition-all border border-amber-500/50">
-                                <span className="flex flex-col items-center justify-center text-xs">
-                                    <span className="flex items-center gap-1 text-sm"><Sparkles size={14}/> 十连</span>
-                                    <span className="opacity-70 scale-90">10令</span>
-                                </span>
-                            </button>
-                        </div>
-                    )}
-                    
+                    {/* Core Altar */}
+                    <div className={`relative z-10 w-40 h-40 bg-gradient-to-b from-stone-800 to-stone-900 rounded-full border-4 border-stone-700 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex items-center justify-center transition-all duration-500
+                        ${phase === 'charging' ? 'scale-110 border-amber-500 shadow-[0_0_50px_rgba(245,158,11,0.5)] animate-shake-hard' : ''}
+                    `}>
+                        {phase === 'charging' ? (
+                            <Compass size={64} className="text-amber-400 animate-spin duration-1000" />
+                        ) : (
+                            <div className="text-stone-600 relative">
+                                <Box size={56} strokeWidth={1.5} />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <Star size={24} className="text-stone-700 fill-stone-700" />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Charging Particles */}
                     {phase === 'charging' && (
-                        <div className="absolute bottom-10 z-20 text-amber-500 font-bold tracking-[0.5em] text-sm animate-pulse drop-shadow-md">
-                            召唤中...
+                        <div className="absolute inset-0 z-0">
+                            <div className="absolute top-1/2 left-1/2 w-full h-1 bg-amber-500/20 -translate-x-1/2 -translate-y-1/2 blur-sm animate-pulse"></div>
+                            <div className="absolute top-1/2 left-1/2 w-1 h-full bg-amber-500/20 -translate-x-1/2 -translate-y-1/2 blur-sm animate-pulse"></div>
                         </div>
                     )}
+                 </div>
+             )}
+
+             {/* Controls */}
+             {phase === 'idle' && (
+                 <div className="mt-12 grid grid-cols-2 gap-6 w-full max-w-sm px-6">
+                    {/* Single Pull Button */}
+                    <button 
+                        onClick={() => performGacha(false)}
+                        className="group relative bg-stone-800 hover:bg-stone-700 border border-stone-600 hover:border-red-500/50 rounded-xl p-1 transition-all duration-300 shadow-lg active:scale-95"
+                    >
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-stone-900 text-stone-400 text-[10px] px-2 py-0.5 rounded-full border border-stone-700 whitespace-nowrap group-hover:text-red-400 transition-colors shadow-sm">
+                            1 招募令
+                        </div>
+                        <div className="h-full w-full bg-gradient-to-b from-stone-800 to-stone-900 rounded-lg py-3 flex flex-col items-center justify-center gap-1 group-hover:from-red-900/20 group-hover:to-stone-900 transition-all">
+                            <span className="text-stone-200 font-bold text-lg group-hover:text-red-100 flex items-center gap-2"><Gift size={16} /> 单次招募</span>
+                            <span className="text-[10px] text-stone-500 group-hover:text-red-300/70">普通概率</span>
+                        </div>
+                    </button>
+
+                    {/* Ten Pull Button */}
+                    <button 
+                        onClick={() => performGacha(true)}
+                        className="group relative bg-stone-800 hover:bg-stone-700 border border-stone-600 hover:border-amber-500/50 rounded-xl p-1 transition-all duration-300 shadow-lg active:scale-95"
+                    >
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-stone-900 text-stone-400 text-[10px] px-2 py-0.5 rounded-full border border-stone-700 whitespace-nowrap group-hover:text-amber-400 transition-colors shadow-sm">
+                            10 招募令
+                        </div>
+                        <div className="h-full w-full bg-gradient-to-b from-stone-800 to-stone-900 rounded-lg py-3 flex flex-col items-center justify-center gap-1 group-hover:from-amber-900/20 group-hover:to-stone-900 transition-all">
+                            <span className="text-amber-400 font-bold text-lg group-hover:text-amber-100 flex items-center gap-2"><Sparkles size={16} /> 十连招募</span>
+                            <span className="text-[10px] text-amber-600/70 group-hover:text-amber-400/70">必出3星+</span>
+                        </div>
+                    </button>
+                 </div>
+             )}
+
+             {/* Status Text */}
+             {phase === 'charging' && (
+                <div className="absolute bottom-20 text-amber-500 font-bold tracking-[0.5em] text-sm animate-pulse drop-shadow-[0_0_10px_rgba(245,158,11,0.8)]">
+                    天命召唤中...
                 </div>
-            )}
+             )}
         </div>
     );
 };
