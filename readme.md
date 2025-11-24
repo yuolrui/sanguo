@@ -1,67 +1,99 @@
-# Three Kingdoms: Warlord Chronicles
+# 三国志：霸业 (Three Kingdoms: Warlord Chronicles)
 
-A full-stack strategy web game.
+一款基于 Web 的三国策略 RPG 游戏，包含抽卡、战役、装备与签到系统。
 
-## Prerequisites
+## 📂 目录结构与构建结果说明
 
-*   **Node.js**: v18.0.0 or higher.
-*   **Nginx**: Latest stable version.
+本项目采用了 **多包单体 (Monorepo-like)** 结构，但为了确保部署清晰，`frontend` 和 `admin` 是完全独立的工程。
 
-## 1. Backend Setup
+**请严格按照以下说明操作，确保构建产物不混淆：**
 
-1.  Navigate to `backend/`.
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  Start the server (this will also initialize the SQLite DB and seed data):
-    ```bash
-    npm start
-    ```
-    *Server runs on port 3000.*
+```
+project-root/
+│
+├── frontend/             # 游戏端工程
+│     ├── package.json    # 独立依赖
+│     ├── vite.config.ts  # 独立构建配置
+│     └── dist/           # 【产物】运行 npm run build 后生成在此处
+│
+├── admin/                # 后台端工程
+│     ├── package.json    # 独立依赖
+│     ├── vite.config.ts  # 独立构建配置
+│     └── dist/           # 【产物】运行 npm run build 后生成在此处
+│
+├── backend/              # Node.js 后端
+│     └── src/
+│
+└── nginx.conf            # 路由配置文件
+```
 
-## 2. Frontend Setup (Game)
+---
 
-1.  Navigate to `frontend/`.
-2.  Create a `vite.config.ts` (if using Vite) or use CRA.
-    *   *Note: The provided code is source only. You need a bundler.*
-    *   Quick Vite Setup: `npm create vite@latest . -- --template react-ts`
-    *   **Overwrite** `src/App.tsx`, `index.html`, etc. with the provided code.
-3.  Install dependencies:
-    ```bash
-    npm install react react-dom react-router-dom lucide-react
-    npm install -D tailwindcss postcss autoprefixer
-    npx tailwindcss init -p
-    ```
-4.  Build for production:
-    ```bash
-    npm run build
-    ```
-    *Output is in `dist/`.*
+## 🚀 详细部署流程
 
-## 3. Admin Setup
+### 1. 准备工作
 
-1.  Navigate to `admin/`.
-2.  Follow similar steps to Frontend (init Vite, install dependencies, overwrite files).
-3.  Build:
-    ```bash
-    npm run build
-    ```
+*   安装 Node.js (v18+)
+*   安装 Nginx
 
-## 4. Nginx Setup
+### 2. 构建游戏前端 (Frontend)
 
-1.  Copy the provided `nginx.conf` to your Nginx configuration directory (or include it in `nginx.conf`).
-2.  **Edit `nginx.conf`**: Change `/path/to/project/...` to the absolute path of your `dist` folders generated in steps 2 and 3.
-3.  Reload Nginx: `nginx -s reload`.
+务必进入 `frontend` 目录操作：
 
-## 5. Game Accounts
+```bash
+cd frontend
 
-*   **Game User**: Register on the localhost:80 page.
-*   **Admin User**:
-    1.  Register a user named `admin` with password `123456` on the game page (frontend).
-    2.  Use these credentials to log in to `localhost:8080`.
+# 1. 安装依赖
+npm install
 
-## Common Issues
+# 2. 构建
+npm run build
+```
 
-*   **CORS**: Ensure Nginx is proxying `/api` correctly or that `cors` is enabled in backend (it is enabled by default in provided code).
-*   **Database**: If `sanguo.db` is locked, restart the Node server.
+*   **检查结果**：请查看 `frontend/dist` 文件夹是否存在。
+*   **部署路径**：在 Nginx 中指向 `.../frontend/dist`。
+
+### 3. 构建管理后台 (Admin)
+
+务必进入 `admin` 目录操作：
+
+```bash
+cd ../admin  # 如果在 frontend 目录下
+
+# 1. 安装依赖
+npm install
+
+# 2. 构建
+npm run build
+```
+
+*   **检查结果**：请查看 `admin/dist` 文件夹是否存在。
+*   **部署路径**：在 Nginx 中指向 `.../admin/dist`。
+
+### 4. 启动后端 (Backend)
+
+```bash
+cd ../backend
+
+npm install
+npm start
+```
+后端将在 `3000` 端口运行，并自动生成 `sanguo.db` 数据库文件。
+
+### 5. 配置 Nginx
+
+使用项目根目录下的 `nginx.conf` 作为模板。
+
+1.  打开 `nginx.conf`。
+2.  找到 `server 80` (Frontend) 部分，修改 `root` 为你的 **frontend/dist 绝对路径**。
+3.  找到 `server 8080` (Admin) 部分，修改 `root` 为你的 **admin/dist 绝对路径**。
+4.  重新加载 Nginx：`nginx -s reload`。
+
+---
+
+## 🔑 初始账号
+
+*   **普通玩家**：直接访问 `http://localhost` 注册。
+*   **管理员**：
+    1.  先在游戏端注册一个账号，用户名为 `admin`。
+    2.  访问 `http://localhost:8080`，使用该账号登录即可（代码中已硬编码 admin 用户名为管理员权限）。
