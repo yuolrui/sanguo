@@ -76,7 +76,7 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
 app.get('/api/user/generals', authenticateToken, async (req, res) => {
   const db = getDB();
   const generals = await db.all(`
-    SELECT ug.id as uid, g.*, ug.level, ug.exp, ug.is_in_team 
+    SELECT ug.id as uid, g.*, ug.level, ug.exp, ug.is_in_team, ug.evolution
     FROM user_generals ug 
     JOIN generals g ON ug.general_id = g.id 
     WHERE ug.user_id = ?`, [req.user.id]);
@@ -165,9 +165,9 @@ app.post('/api/team/auto', authenticateToken, async (req, res) => {
     // Reset current team
     await db.run('UPDATE user_generals SET is_in_team = 0 WHERE user_id = ?', [userId]);
 
-    // Get top 5 generals by base stats
+    // Get top 5 generals by base stats (+ evolution bonus estimation)
     const allGenerals = await db.all(`
-        SELECT ug.id, (g.str + g.int + g.ldr) as power 
+        SELECT ug.id, (g.str + g.int + g.ldr) * (1 + (IFNULL(ug.evolution, 0) * 0.1)) as power 
         FROM user_generals ug
         JOIN generals g ON ug.general_id = g.id
         WHERE ug.user_id = ?
@@ -220,6 +220,32 @@ app.post('/api/equip/unequip', authenticateToken, async (req, res) => {
     res.json({ success: true });
 });
 
+// Evolve General
+app.post('/api/general/evolve', authenticateToken, async (req, res) => {
+    const { targetUid, materialUid } = req.body;
+    const userId = req.user.id;
+    const db = getDB();
+
+    if (targetUid === materialUid) return res.status(400).json({ error: 'Cannot consume self' });
+
+    // Verify ownership and type
+    const target = await db.get('SELECT * FROM user_generals WHERE id = ? AND user_id = ?', [targetUid, userId]);
+    const material = await db.get('SELECT * FROM user_generals WHERE id = ? AND user_id = ?', [materialUid, userId]);
+
+    if (!target || !material) return res.status(404).json({ error: 'General not found' });
+    if (target.general_id !== material.general_id) return res.status(400).json({ error: 'Must be same general type' });
+
+    // Consume material
+    await db.run('DELETE FROM user_generals WHERE id = ?', [materialUid]);
+    // Return material's equipment to inventory
+    await db.run('UPDATE user_equipments SET general_id = NULL WHERE general_id = ?', [materialUid]);
+
+    // Evolve target
+    await db.run('UPDATE user_generals SET evolution = evolution + 1 WHERE id = ?', [targetUid]);
+
+    res.json({ success: true });
+});
+
 // Campaign List
 app.get('/api/campaigns', authenticateToken, async (req, res) => {
   const db = getDB();
@@ -240,9 +266,9 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
   
   const campaign = await db.get('SELECT * FROM campaigns WHERE id = ?', [campaignId]);
   
-  // Calculate user power (Base + Equipment)
+  // Calculate user power (Base + Evolution + Equipment)
   const team = await db.all(`
-    SELECT ug.id, g.str, g.int, g.ldr, ug.level 
+    SELECT ug.id, g.str, g.int, g.ldr, ug.level, ug.evolution 
     FROM user_generals ug 
     JOIN generals g ON ug.general_id = g.id 
     WHERE ug.user_id = ? AND ug.is_in_team = 1`, [req.user.id]);
@@ -251,7 +277,9 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
   if (team.length === 0) return res.status(400).json({error: 'Please form a team first'});
 
   for (const m of team) {
-    let generalPower = (m.str + m.int + m.ldr) * m.level;
+    let evolutionBonus = 1 + (m.evolution || 0) * 0.1; // 10% per evolution
+    let generalPower = (m.str + m.int + m.ldr) * m.level * evolutionBonus;
+    
     // Add equipment bonus
     const equips = await db.all(`
         SELECT e.stat_bonus 

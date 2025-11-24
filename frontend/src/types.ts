@@ -1,3 +1,4 @@
+
 export interface User {
     id: number;
     username: string;
@@ -37,6 +38,7 @@ export interface UserGeneral extends General {
     level: number;
     exp: number;
     is_in_team: boolean;
+    evolution: number;
     equipments: UserEquipment[];
 }
 

@@ -53,6 +53,7 @@ export async function initDB() {
       level INTEGER DEFAULT 1,
       exp INTEGER DEFAULT 0,
       is_in_team BOOLEAN DEFAULT 0,
+      evolution INTEGER DEFAULT 0, -- 进阶等级
       FOREIGN KEY(user_id) REFERENCES users(id),
       FOREIGN KEY(general_id) REFERENCES generals(id)
     );
@@ -91,6 +92,14 @@ export async function initDB() {
       PRIMARY KEY (user_id, campaign_id)
     );
   `);
+
+  // Migration: Ensure evolution column exists for old databases
+  try {
+      await db.exec("ALTER TABLE user_generals ADD COLUMN evolution INTEGER DEFAULT 0");
+      console.log("Migrated: Added evolution column to user_generals");
+  } catch (e) {
+      // Column likely exists, ignore error
+  }
 
   // Seed Data Definition
   const generalsList = [
@@ -158,11 +167,7 @@ export async function initDB() {
       );
     }
   } else {
-    // UPDATE EXISTING AVATARS to match the new style
-    console.log('Updating existing generals with new visuals...');
-    for (const g of generalsList) {
-        await db.run('UPDATE generals SET avatar = ? WHERE name = ?', [g.avatar, g.name]);
-    }
+    // Update logic could be here if needed
   }
 
   // Seed Campaigns & Equipment (Only if table is empty to avoid dupes on restart)

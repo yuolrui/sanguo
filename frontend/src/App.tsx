@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
-import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info } from 'lucide-react';
+import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS } from './types';
 
 // --- API Service ---
@@ -57,6 +57,10 @@ const api = {
     },
     unequipAll: async (token: string, generalUid: number) => {
         const res = await fetch(`${API_URL}/equip/unequip`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ generalUid }) });
+        return res.json();
+    },
+    evolve: async (token: string, targetUid: number, materialUid: number) => {
+        const res = await fetch(`${API_URL}/general/evolve`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUid, materialUid }) });
         return res.json();
     }
 };
@@ -372,6 +376,28 @@ const Barracks = () => {
         load();
     };
 
+    const handleEvolve = async (targetUid: number, generalId: number) => {
+        if(!token) return;
+        // Find a duplicate that is NOT the target and preferably NOT in team
+        // We prioritize those not in team first
+        const duplicate = generals.find(g => g.uid !== targetUid && g.id === generalId && !g.is_in_team)
+                       || generals.find(g => g.uid !== targetUid && g.id === generalId);
+        
+        if (!duplicate) {
+            return toast.show('需要相同的武将作为素材', 'error');
+        }
+        
+        if (duplicate.is_in_team) {
+             if(!confirm('素材武将正在队伍中，确定要消耗吗？')) return;
+        }
+
+        const res = await api.evolve(token, targetUid, duplicate.uid);
+        if (res.error) return toast.show(res.error, 'error');
+        
+        toast.show('武将进阶成功！战力大幅提升！', 'success');
+        load();
+    };
+
     const team = generals.filter(g => g.is_in_team);
 
     return (
@@ -397,6 +423,7 @@ const Barracks = () => {
                                     <div className={`absolute top-0 left-0 px-1.5 py-0.5 text-[10px] font-bold text-white ${COUNTRY_COLORS[g.country]}`}>
                                         {g.country}
                                     </div>
+                                    {g.evolution > 0 && <div className="absolute top-0 right-0 px-1.5 py-0.5 text-[10px] font-bold text-red-400 bg-black/50">+{g.evolution}</div>}
                                 </div>
                                 <div className="bg-gradient-to-t from-black to-transparent absolute bottom-0 w-full p-1 pt-4">
                                     <div className="text-white font-bold text-xs text-center drop-shadow-md">{g.name}</div>
@@ -439,7 +466,8 @@ const Barracks = () => {
                                             </div>
                                             <div>
                                                 <div className="font-bold text-stone-100 flex items-center gap-1">
-                                                    {g.name}
+                                                    {g.name} 
+                                                    {g.evolution > 0 && <span className="text-red-400">+{g.evolution}</span>}
                                                     {g.is_in_team && <Shield size={10} className="text-amber-500"/>}
                                                 </div>
                                                 <div className="text-xs text-yellow-600">{'★'.repeat(g.stars)} <span className="text-stone-500 ml-1">Lv.{g.level}</span></div>
@@ -468,7 +496,10 @@ const Barracks = () => {
                                         </div>
                                     </td>
                                     <td className="px-4 py-3 text-right">
-                                        <div className="flex justify-end gap-2">
+                                        <div className="flex justify-end gap-2 items-center">
+                                            <button onClick={() => handleEvolve(g.uid, g.id)} className="px-2 py-1 bg-purple-900 hover:bg-purple-800 text-purple-200 rounded text-xs border border-purple-700 flex items-center gap-1" title="消耗相同武将进阶">
+                                                <ChevronUp size={12}/> 进阶
+                                            </button>
                                             <button onClick={() => toggle(g.uid, g.is_in_team)} 
                                                 className={`px-2 py-1 rounded text-xs border ${g.is_in_team ? 'border-red-800 text-red-400 hover:bg-red-900/30' : 'border-green-800 text-green-400 hover:bg-green-900/30'}`}>
                                                 {g.is_in_team ? '下阵' : '上阵'}
