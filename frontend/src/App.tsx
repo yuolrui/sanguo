@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
-import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen } from 'lucide-react';
+import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS, STAR_STYLES } from './types';
 
 // --- API Service ---
@@ -290,58 +290,131 @@ const Dashboard = () => {
 const Gacha = () => {
     const { token, refreshUser, user } = useAuth();
     const [result, setResult] = useState<General[] | null>(null);
+    const [isSummoning, setIsSummoning] = useState(false);
     const toast = useToast();
 
+    const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
     const handleGacha = async () => {
-        if (!token) return;
+        if (!token || isSummoning) return;
+        setIsSummoning(true);
+        // Suspense delay
+        await wait(1500);
+        
         const res = await api.gacha(token);
+        setIsSummoning(false);
+        
         if (res.error) return toast.show(res.error, 'error');
         setResult([res.general]);
         refreshUser();
     };
 
     const handleGachaTen = async () => {
-        if (!token) return;
+        if (!token || isSummoning) return;
+        setIsSummoning(true);
+        // Suspense delay
+        await wait(1500);
+        
         const res = await api.gachaTen(token);
+        setIsSummoning(false);
+        
         if (res.error) return toast.show(res.error, 'error');
         setResult(res.generals);
         refreshUser();
     }
 
+    const hasLegendary = result?.some(g => g.stars === 5);
+
     return (
-        <div className="flex flex-col items-center space-y-8 py-4">
-            <h2 className="text-2xl font-bold text-amber-500">聚贤庄招募</h2>
-            <div className="text-stone-400 text-sm">保底进度: {user?.pity_counter}/60 (60抽必出5星)</div>
+        <div className="flex flex-col items-center space-y-6 py-4">
+            <h2 className="text-2xl font-bold text-amber-500 flex items-center gap-2">
+                <Sparkles size={24}/> 聚贤庄招募
+            </h2>
+            <div className="text-stone-400 text-sm bg-stone-900/50 px-3 py-1 rounded-full border border-stone-700">
+                保底进度: <span className="text-amber-500 font-bold">{user?.pity_counter}</span>/60
+            </div>
             
             {result ? (
-                <div className="w-full animate-fade-in-up text-center space-y-4 bg-stone-800 p-4 md:p-6 rounded-xl border border-amber-500/50 shadow-2xl">
-                    <h3 className="text-xl text-amber-300">招募成功!</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                        {result.map((g, i) => {
-                             const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
-                             return (
-                                <div key={i} className={`flex flex-col items-center p-2 bg-stone-900 rounded border-2 ${style.border} relative overflow-hidden group`}>
-                                    <div className={`absolute inset-0 opacity-10 ${style.bg}`}></div>
-                                    <img src={g.avatar} className={`w-16 md:w-20 h-24 md:h-32 object-cover rounded border ${style.border} shadow-lg`} />
-                                    <div className={`text-sm font-bold mt-2 ${style.text}`}>{g.name}</div>
-                                    <div className={`${style.text} text-xs font-bold`}>{'★'.repeat(g.stars)}</div>
-                                </div>
-                             );
-                        })}
+                <div className={`w-full animate-fade-in-up text-center space-y-6 bg-stone-800 p-6 md:p-8 rounded-xl border-2 shadow-2xl relative overflow-hidden ${hasLegendary ? 'border-amber-400/80 shadow-amber-900/50' : 'border-stone-600'}`}>
+                    {hasLegendary && (
+                        <div className="absolute inset-0 bg-amber-500/10 animate-pulse pointer-events-none"></div>
+                    )}
+                    <div className="relative z-10">
+                        <h3 className={`text-2xl font-bold mb-6 ${hasLegendary ? 'text-amber-300 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-stone-300'}`}>
+                            {hasLegendary ? '✨ 传说降临! ✨' : '招募完成'}
+                        </h3>
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            {result.map((g, i) => {
+                                 const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
+                                 const isFiveStar = g.stars === 5;
+                                 return (
+                                    <div key={i} className={`flex flex-col items-center p-2 bg-stone-900 rounded-lg border-2 ${style.border} relative overflow-hidden group transform transition-all hover:scale-105 duration-300 ${isFiveStar ? 'shadow-[0_0_15px_rgba(251,191,36,0.4)]' : ''}`}>
+                                        <div className={`absolute inset-0 opacity-10 ${style.bg}`}></div>
+                                        {isFiveStar && <div className="absolute inset-0 bg-gradient-to-t from-amber-500/20 to-transparent animate-pulse"></div>}
+                                        <div className="relative w-full aspect-[2/3] overflow-hidden rounded border border-stone-800">
+                                            <img src={g.avatar} className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className={`text-sm font-bold mt-2 ${style.text} truncate w-full`}>{g.name}</div>
+                                        <div className="flex items-center gap-1 mt-1">
+                                            {Array.from({length: g.stars}).map((_, si) => (
+                                                <Star key={si} size={10} className={`${isFiveStar ? 'text-amber-400 fill-amber-400' : 'text-stone-500 fill-stone-500'}`} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                 );
+                            })}
+                        </div>
+                        <button onClick={() => setResult(null)} className="mt-8 px-10 py-3 bg-stone-700 rounded-full hover:bg-stone-600 text-white font-bold w-full md:w-auto border border-stone-500 active:scale-95 transition">
+                            继续招募
+                        </button>
                     </div>
-                    <button onClick={() => setResult(null)} className="px-8 py-3 bg-stone-700 rounded-lg hover:bg-stone-600 mt-4 text-white font-bold w-full md:w-auto">继续</button>
                 </div>
             ) : (
-                <div className="w-full max-w-sm bg-stone-800 rounded-xl border-2 border-dashed border-stone-700 flex flex-col items-center justify-center p-8 text-center space-y-4">
-                    <div className="text-6xl animate-bounce">🧧</div>
-                    <div className="flex flex-col gap-3 w-full">
-                        <button onClick={handleGacha} className="bg-red-700 hover:bg-red-600 text-white font-bold py-3 rounded-lg shadow-lg transform active:scale-95 transition-all">
-                            单次招募 (1令)
-                        </button>
-                        <button onClick={handleGachaTen} className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg shadow-lg transform active:scale-95 transition-all">
-                            十连招募 (10令)
-                        </button>
+                <div className="w-full max-w-md aspect-square bg-stone-900 rounded-full border-4 border-stone-700 relative flex flex-col items-center justify-center p-8 shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] overflow-hidden">
+                    {/* Altar Effects */}
+                    <div className={`absolute inset-0 border-[10px] border-stone-800 rounded-full ${isSummoning ? 'animate-spin duration-[3s]' : ''}`}>
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-4 bg-stone-600 rounded-full"></div>
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-4 bg-stone-600 rounded-full"></div>
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-stone-600 rounded-full"></div>
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-stone-600 rounded-full"></div>
                     </div>
+                    
+                    {/* Inner Circle / Portal */}
+                    <div className={`absolute inset-8 rounded-full border-2 border-stone-600 flex items-center justify-center ${isSummoning ? 'bg-amber-900/20 animate-pulse' : 'bg-stone-800'}`}>
+                         {isSummoning ? (
+                             <div className="text-amber-500 animate-bounce">
+                                <Sparkles size={64} className="animate-spin" />
+                             </div>
+                         ) : (
+                             <div className="text-stone-600">
+                                <Users size={64} opacity={0.2} />
+                             </div>
+                         )}
+                    </div>
+
+                    {/* Controls */}
+                    {!isSummoning && (
+                        <div className="relative z-10 flex flex-col gap-4 w-full max-w-[200px]">
+                            <button onClick={handleGacha} className="group relative bg-red-800 hover:bg-red-700 text-white font-bold py-3 rounded-lg shadow-lg transform active:scale-95 transition-all overflow-hidden border border-red-600">
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                                <span className="flex items-center justify-center gap-2">
+                                    <Gift size={16}/> 单次招募 <span className="text-xs opacity-70 bg-black/30 px-1 rounded">1令</span>
+                                </span>
+                            </button>
+                            <button onClick={handleGachaTen} className="group relative bg-amber-700 hover:bg-amber-600 text-white font-bold py-3 rounded-lg shadow-lg transform active:scale-95 transition-all overflow-hidden border border-amber-500">
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                                <span className="flex items-center justify-center gap-2">
+                                    <Sparkles size={16}/> 十连招募 <span className="text-xs opacity-70 bg-black/30 px-1 rounded">10令</span>
+                                </span>
+                            </button>
+                        </div>
+                    )}
+                    
+                    {isSummoning && (
+                        <div className="relative z-10 text-amber-500 font-bold tracking-widest text-lg animate-pulse">
+                            正在召唤...
+                        </div>
+                    )}
                 </div>
             )}
         </div>
