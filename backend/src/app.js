@@ -24,6 +24,14 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+const isAdmin = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        res.sendStatus(403);
+    }
+};
+
 // --- AUTH ROUTES ---
 app.post('/api/register', async (req, res) => {
   const { username, password } = req.body;
@@ -297,21 +305,91 @@ app.post('/api/signin', authenticateToken, async (req, res) => {
 });
 
 // --- ADMIN ROUTES ---
-app.get('/admin/v1/generals', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin') return res.sendStatus(403);
-  const db = getDB();
-  const generals = await db.all('SELECT * FROM generals');
-  res.json(generals);
+
+// 1. Get Base Data (For Dropdowns)
+app.get('/admin/v1/meta', authenticateToken, isAdmin, async (req, res) => {
+    const db = getDB();
+    const generals = await db.all('SELECT * FROM generals');
+    const equipments = await db.all('SELECT * FROM equipments');
+    res.json({ generals, equipments });
 });
 
-app.post('/admin/v1/generals', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') return res.sendStatus(403);
+// 2. Add Base General
+app.post('/admin/v1/generals', authenticateToken, isAdmin, async (req, res) => {
     const { name, stars, str, int, ldr, luck, country, avatar, description } = req.body;
     const db = getDB();
     await db.run(
         `INSERT INTO generals (name, stars, str, int, ldr, luck, country, avatar, description) VALUES (?,?,?,?,?,?,?,?,?)`,
         [name, stars, str, int, ldr, luck, country, avatar, description]
     );
+    res.json({ success: true });
+});
+
+// 3. User Management - List Users
+app.get('/admin/v1/users', authenticateToken, isAdmin, async (req, res) => {
+    const db = getDB();
+    const users = await db.all('SELECT id, username, gold, tokens FROM users ORDER BY id DESC');
+    res.json(users);
+});
+
+// 4. User Management - Get User Detail
+app.get('/admin/v1/users/:id', authenticateToken, isAdmin, async (req, res) => {
+    const db = getDB();
+    const userId = req.params.id;
+    
+    const user = await db.get('SELECT id, username, gold, tokens FROM users WHERE id = ?', [userId]);
+    if (!user) return res.status(404).json({error: 'User not found'});
+
+    const generals = await db.all(`
+        SELECT ug.id as uid, g.name, g.stars, g.avatar, ug.level 
+        FROM user_generals ug 
+        JOIN generals g ON ug.general_id = g.id 
+        WHERE ug.user_id = ?`, [userId]);
+
+    const equipments = await db.all(`
+        SELECT ue.id as uid, e.name, e.type, e.stars 
+        FROM user_equipments ue 
+        JOIN equipments e ON ue.equipment_id = e.id 
+        WHERE ue.user_id = ?`, [userId]);
+
+    res.json({ user, generals, equipments });
+});
+
+// 5. Update User Currency
+app.post('/admin/v1/users/:id/currency', authenticateToken, isAdmin, async (req, res) => {
+    const { gold, tokens } = req.body;
+    const db = getDB();
+    await db.run('UPDATE users SET gold = ?, tokens = ? WHERE id = ?', [gold, tokens, req.params.id]);
+    res.json({ success: true });
+});
+
+// 6. Grant/Revoke General
+app.post('/admin/v1/users/:id/general', authenticateToken, isAdmin, async (req, res) => {
+    const { generalId, action, uid } = req.body; // action: 'add' | 'remove'
+    const db = getDB();
+    const userId = req.params.id;
+    
+    if (action === 'add') {
+        await db.run('INSERT INTO user_generals (user_id, general_id) VALUES (?, ?)', [userId, generalId]);
+    } else {
+        await db.run('DELETE FROM user_generals WHERE id = ? AND user_id = ?', [uid, userId]);
+        // Also remove equipments from this general
+        await db.run('UPDATE user_equipments SET general_id = NULL WHERE general_id = ? AND user_id = ?', [uid, userId]);
+    }
+    res.json({ success: true });
+});
+
+// 7. Grant/Revoke Equipment
+app.post('/admin/v1/users/:id/equipment', authenticateToken, isAdmin, async (req, res) => {
+    const { equipmentId, action, uid } = req.body; // action: 'add' | 'remove'
+    const db = getDB();
+    const userId = req.params.id;
+
+    if (action === 'add') {
+        await db.run('INSERT INTO user_equipments (user_id, equipment_id) VALUES (?, ?)', [userId, equipmentId]);
+    } else {
+        await db.run('DELETE FROM user_equipments WHERE id = ? AND user_id = ?', [uid, userId]);
+    }
     res.json({ success: true });
 });
 
