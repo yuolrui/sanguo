@@ -422,7 +422,31 @@ app.post('/admin/v1/users/:id/equipment', authenticateToken, isAdmin, async (req
 });
 
 initDB().then(() => {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`Backend running on port ${PORT}`);
   });
+
+  // Handle Port in Use Error gracefully
+  server.on('error', (e) => {
+    if (e.code === 'EADDRINUSE') {
+      console.error(`\n[FATAL ERROR] Port ${PORT} is already in use.`);
+      console.error(`To fix this, find and kill the process using port ${PORT}.`);
+      console.error(`Try running: lsof -i :${PORT} | grep LISTEN | awk '{print $2}' | xargs kill -9`);
+      process.exit(1);
+    } else {
+      throw e;
+    }
+  });
+
+  // Graceful Shutdown
+  const shutdown = () => {
+    console.log('\nStopping server...');
+    server.close(() => {
+        console.log('Server stopped.');
+        process.exit(0);
+    });
+  };
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 });

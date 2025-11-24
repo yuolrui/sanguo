@@ -22,7 +22,8 @@
     "@vitejs/plugin-react": "^5.1.1",
     "vite": "^7.2.4",
     "path": "^0.12.7",
-    "bcryptjs": "^3.0.3"
+    "bcryptjs": "^3.0.3",
+    "url": "^0.11.4"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
