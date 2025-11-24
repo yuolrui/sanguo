@@ -335,6 +335,19 @@ const Gacha = () => {
     );
 };
 
+// --- Helper: Calculate Total Power ---
+const calculatePower = (g: UserGeneral) => {
+    const baseAttr = g.str + g.int + g.ldr;
+    // 10% bonus per evolution level
+    const evolutionBonus = 1 + (g.evolution || 0) * 0.1;
+    const basePower = baseAttr * g.level * evolutionBonus;
+    
+    // Sum equipment stats
+    const equipPower = g.equipments ? g.equipments.reduce((acc, e) => acc + e.stat_bonus, 0) : 0;
+    
+    return Math.floor(basePower + equipPower);
+};
+
 // --- New Barracks View (Koei Style) ---
 const Barracks = () => {
     const { token } = useAuth();
@@ -358,7 +371,6 @@ const Barracks = () => {
             if (currentTeam.length >= 5) return toast.show('部队已满 (5人)', 'error');
             
             const target = generals.find(g => g.uid === uid);
-            // Check if ANY general in the team has the same 'id' (General template ID) as the target
             if (target && currentTeam.some(g => g.id === target.id)) return toast.show('同名武将不可重复上阵', 'error');
         }
 
@@ -393,8 +405,6 @@ const Barracks = () => {
 
     const handleEvolve = async (targetUid: number, generalId: number) => {
         if(!token) return;
-        // Find a duplicate that is NOT the target and preferably NOT in team
-        // We prioritize those not in team first
         const duplicate = generals.find(g => g.uid !== targetUid && g.id === generalId && !g.is_in_team)
                        || generals.find(g => g.uid !== targetUid && g.id === generalId);
         
@@ -413,7 +423,16 @@ const Barracks = () => {
         load();
     };
 
-    const team = generals.filter(g => g.is_in_team);
+    // Sort Team by Power
+    const team = generals
+        .filter(g => g.is_in_team)
+        .sort((a, b) => calculatePower(b) - calculatePower(a));
+
+    // Sort Roster by Stars (desc) then Power (desc)
+    const sortedGenerals = [...generals].sort((a, b) => {
+        if (b.stars !== a.stars) return b.stars - a.stars;
+        return calculatePower(b) - calculatePower(a);
+    });
 
     return (
         <div className="space-y-6">
@@ -444,7 +463,7 @@ const Barracks = () => {
                                     <div className="text-white font-bold text-xs text-center drop-shadow-md">{g.name}</div>
                                     <div className="flex justify-between items-end text-[10px] text-stone-300 px-1 mt-1">
                                         <span>Lv.{g.level}</span>
-                                        <span className="text-amber-400">{(g.str+g.int+g.ldr)}</span>
+                                        <span className="text-amber-400">{calculatePower(g)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -463,13 +482,18 @@ const Barracks = () => {
                         <thead className="bg-stone-900 text-stone-500 text-xs uppercase">
                             <tr>
                                 <th className="px-4 py-3">武将</th>
-                                <th className="px-4 py-3">属性 (武/智/统)</th>
+                                <th className="px-4 py-3">属性</th>
                                 <th className="px-4 py-3 hidden md:table-cell">装备</th>
                                 <th className="px-4 py-3 text-right">操作</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-stone-700">
-                            {generals.map(g => (
+                            {sortedGenerals.map(g => {
+                                const power = calculatePower(g);
+                                // Check if there is any other general with same template ID but different UID
+                                const hasMaterial = generals.some(m => m.id === g.id && m.uid !== g.uid);
+
+                                return (
                                 <tr key={g.uid} className={`hover:bg-stone-700/50 transition ${g.is_in_team ? 'bg-amber-900/10' : ''}`}>
                                     <td className="px-4 py-3">
                                         <div className="flex items-center gap-3">
@@ -490,10 +514,13 @@ const Barracks = () => {
                                         </div>
                                     </td>
                                     <td className="px-4 py-3">
-                                        <div className="flex gap-2 text-xs font-mono">
-                                            <span className="text-red-400" title="武力">{g.str}</span>/
-                                            <span className="text-blue-400" title="智力">{g.int}</span>/
-                                            <span className="text-green-400" title="统率">{g.ldr}</span>
+                                        <div className="flex flex-col text-xs">
+                                            <div className="text-amber-500 font-bold mb-1">战力: {power}</div>
+                                            <div className="flex gap-2 font-mono opacity-70">
+                                                <span className="text-red-400" title="武力">{g.str}</span>
+                                                <span className="text-blue-400" title="智力">{g.int}</span>
+                                                <span className="text-green-400" title="统率">{g.ldr}</span>
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="px-4 py-3 hidden md:table-cell">
@@ -512,9 +539,11 @@ const Barracks = () => {
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <div className="flex justify-end gap-2 items-center">
-                                            <button onClick={() => handleEvolve(g.uid, g.id)} className="px-2 py-1 bg-purple-900 hover:bg-purple-800 text-purple-200 rounded text-xs border border-purple-700 flex items-center gap-1" title="消耗相同武将进阶">
-                                                <ChevronUp size={12}/> 进阶
-                                            </button>
+                                            {hasMaterial && (
+                                                <button onClick={() => handleEvolve(g.uid, g.id)} className="px-2 py-1 bg-purple-900 hover:bg-purple-800 text-purple-200 rounded text-xs border border-purple-700 flex items-center gap-1 animate-pulse" title="消耗相同武将进阶">
+                                                    <ChevronUp size={12}/> 进阶
+                                                </button>
+                                            )}
                                             <button onClick={() => toggle(g.uid, g.is_in_team)} 
                                                 className={`px-2 py-1 rounded text-xs border ${g.is_in_team ? 'border-red-800 text-red-400 hover:bg-red-900/30' : 'border-green-800 text-green-400 hover:bg-green-900/30'}`}>
                                                 {g.is_in_team ? '下阵' : '上阵'}
@@ -531,7 +560,8 @@ const Barracks = () => {
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
