@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
-import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star } from 'lucide-react';
-import { User, General, UserGeneral, Campaign, COUNTRY_COLORS, STAR_STYLES } from './types';
+import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star, Box } from 'lucide-react';
+import { User, General, UserGeneral, Campaign, COUNTRY_COLORS, STAR_STYLES, Equipment } from './types';
 
 // --- API Service ---
 const API_URL = '/api';
@@ -25,6 +25,10 @@ const api = {
     },
     getGallery: async (token: string) => {
         const res = await fetch(`${API_URL}/gallery`, { headers: { 'Authorization': `Bearer ${token}` } });
+        return res.json();
+    },
+    getCollection: async (token: string) => {
+        const res = await fetch(`${API_URL}/user/collection`, { headers: { 'Authorization': `Bearer ${token}` } });
         return res.json();
     },
     gacha: async (token: string) => {
@@ -513,14 +517,19 @@ const getGeneralBonds = (g: General) => {
 // --- Gallery View ---
 const Gallery = () => {
     const { token } = useAuth();
-    const [generals, setGenerals] = useState<General[]>([]);
-    const [filter, setFilter] = useState('全部');
+    const [meta, setMeta] = useState<{ generals: General[], equipments: Equipment[] }>({ generals: [], equipments: [] });
+    const [collection, setCollection] = useState<{ generalIds: number[], equipmentIds: number[] }>({ generalIds: [], equipmentIds: [] });
+    const [tab, setTab] = useState<'generals' | 'equipments'>('generals');
+    const [filter, setFilter] = useState('全部'); // For generals
     
     useEffect(() => {
-        if(token) api.getGallery(token).then(setGenerals);
+        if(token) {
+            api.getGallery(token).then(setMeta);
+            api.getCollection(token).then(setCollection);
+        }
     }, [token]);
 
-    const filtered = filter === '全部' ? generals : generals.filter(g => g.country === filter);
+    const filteredGenerals = filter === '全部' ? meta.generals : meta.generals.filter(g => g.country === filter);
 
     const getProb = (stars: number) => {
         if (stars === 5) return '2%';
@@ -528,39 +537,71 @@ const Gallery = () => {
         return '88%';
     };
 
+    const isOwned = (id: number, type: 'general' | 'equip') => {
+        if (type === 'general') return collection.generalIds.includes(id);
+        return collection.equipmentIds.includes(id);
+    };
+
+    const ownedCount = tab === 'generals' ? collection.generalIds.length : collection.equipmentIds.length;
+    const totalCount = tab === 'generals' ? meta.generals.length : meta.equipments.length;
+
     return (
         <div className="space-y-4">
-            <h2 className="text-xl font-bold border-l-4 border-purple-500 pl-3 flex items-center gap-2">
-                <BookOpen size={24}/> 武将图鉴
+            <h2 className="text-xl font-bold border-l-4 border-purple-500 pl-3 flex items-center justify-between">
+                <div className="flex items-center gap-2"><BookOpen size={24}/> 图鉴</div>
+                <div className="text-sm font-normal text-stone-400">
+                    收集进度: <span className="text-amber-500 font-bold">{ownedCount}</span> / {totalCount}
+                </div>
             </h2>
             
-            {/* Filters */}
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                {['全部', '魏', '蜀', '吴', '群'].map(c => (
-                    <button 
-                        key={c}
-                        onClick={() => setFilter(c)}
-                        className={`px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${filter === c ? 'bg-amber-600 text-white' : 'bg-stone-800 text-stone-400 hover:bg-stone-700'}`}
-                    >
-                        {c}
-                    </button>
-                ))}
+            {/* Tabs */}
+            <div className="flex bg-stone-800 rounded-lg p-1 border border-stone-700">
+                <button 
+                    onClick={() => setTab('generals')}
+                    className={`flex-1 py-2 text-sm font-bold rounded-md transition-colors ${tab === 'generals' ? 'bg-stone-700 text-white shadow' : 'text-stone-400 hover:text-stone-200'}`}
+                >
+                    武将
+                </button>
+                <button 
+                    onClick={() => setTab('equipments')}
+                    className={`flex-1 py-2 text-sm font-bold rounded-md transition-colors ${tab === 'equipments' ? 'bg-stone-700 text-white shadow' : 'text-stone-400 hover:text-stone-200'}`}
+                >
+                    装备
+                </button>
             </div>
+
+            {/* General Filters */}
+            {tab === 'generals' && (
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    {['全部', '魏', '蜀', '吴', '群'].map(c => (
+                        <button 
+                            key={c}
+                            onClick={() => setFilter(c)}
+                            className={`px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${filter === c ? 'bg-amber-600 text-white' : 'bg-stone-800 text-stone-400 hover:bg-stone-700'}`}
+                        >
+                            {c}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {filtered.map(g => {
+                {/* GENERALS GRID */}
+                {tab === 'generals' && filteredGenerals.map(g => {
                     const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
                     const bonds = getGeneralBonds(g);
+                    const owned = isOwned(g.id, 'general');
 
                     return (
-                        <div key={g.id} className="bg-stone-800 rounded-lg p-3 border border-stone-700 flex gap-4 shadow-lg">
+                        <div key={g.id} className={`bg-stone-800 rounded-lg p-3 border flex gap-4 shadow-lg transition-all ${owned ? 'border-stone-700' : 'border-stone-800 opacity-60 grayscale'}`}>
                             {/* Avatar */}
                             <div className="relative w-20 h-28 shrink-0">
                                 <img src={g.avatar} className={`w-full h-full object-cover rounded border-2 ${style.border}`} />
                                 <div className={`absolute -top-1 -left-1 px-1.5 py-0.5 text-[10px] font-bold text-white rounded-full ${COUNTRY_COLORS[g.country]}`}>
                                     {g.country}
                                 </div>
+                                {!owned && <div className="absolute inset-0 bg-black/50 flex items-center justify-center font-bold text-xs text-white">未获取</div>}
                             </div>
 
                             {/* Info */}
@@ -583,10 +624,6 @@ const Gallery = () => {
 
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-1 text-[10px] text-stone-400">
-                                        <Landmark size={10} className="text-stone-500" />
-                                        <span>获取方式: <span className="text-stone-300">聚贤庄</span></span>
-                                    </div>
-                                    <div className="flex items-center gap-1 text-[10px] text-stone-400">
                                         <Gift size={10} className="text-stone-500" />
                                         <span>招募概率: <span className="text-amber-500 font-bold">{getProb(g.stars)}</span></span>
                                     </div>
@@ -599,6 +636,48 @@ const Gallery = () => {
                                             </span>
                                         ))}
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+
+                {/* EQUIPMENTS GRID */}
+                {tab === 'equipments' && meta.equipments.map(e => {
+                    const style = STAR_STYLES[e.stars] || STAR_STYLES[1];
+                    const owned = isOwned(e.id, 'equip');
+
+                    return (
+                        <div key={e.id} className={`bg-stone-800 rounded-lg p-3 border flex gap-4 shadow-lg transition-all ${owned ? 'border-stone-700' : 'border-stone-800 opacity-60 grayscale'}`}>
+                            {/* Icon */}
+                            <div className={`w-20 h-20 shrink-0 rounded border-2 ${style.border} bg-stone-900 flex items-center justify-center relative overflow-hidden`}>
+                                <div className={`absolute inset-0 opacity-10 ${style.bg}`}></div>
+                                {e.type === 'weapon' && <Sword size={32} className={style.text} />}
+                                {e.type === 'armor' && <Shield size={32} className={style.text} />}
+                                {e.type === 'treasure' && <Box size={32} className={style.text} />}
+                                {!owned && <div className="absolute inset-0 bg-black/50 flex items-center justify-center font-bold text-xs text-white">未获取</div>}
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1 flex flex-col justify-between py-1">
+                                <div>
+                                    <div className="flex justify-between items-start">
+                                        <div className={`font-bold ${style.text}`}>{e.name}</div>
+                                        <div className="text-xs font-bold bg-stone-900 px-1.5 py-0.5 rounded text-stone-400">
+                                            {e.stars}★
+                                        </div>
+                                    </div>
+                                    <div className="text-xs text-stone-500 mt-1 uppercase tracking-wider">{e.type === 'weapon' ? '武器' : e.type === 'armor' ? '防具' : '宝物'}</div>
+                                </div>
+
+                                <div className="mt-2 bg-stone-900/50 p-2 rounded text-xs text-stone-300 flex justify-between items-center">
+                                    <span>主属性加成</span>
+                                    <span className="font-mono text-amber-500 font-bold">+{e.stat_bonus}</span>
+                                </div>
+                                
+                                <div className="flex items-center gap-1 text-[10px] text-stone-400 mt-1">
+                                    <Landmark size={10} className="text-stone-500" />
+                                    <span>获取: 战役掉落 / 商店</span>
                                 </div>
                             </div>
                         </div>

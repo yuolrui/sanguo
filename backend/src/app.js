@@ -97,6 +97,28 @@ app.get('/api/user/generals', authenticateToken, async (req, res) => {
   res.json(result);
 });
 
+// Get Gallery (All Generals & Equipment)
+app.get('/api/gallery', authenticateToken, async (req, res) => {
+    const db = getDB();
+    const generals = await db.all('SELECT * FROM generals ORDER BY stars DESC, country, id');
+    const equipments = await db.all('SELECT * FROM equipments ORDER BY stars DESC, type, id');
+    res.json({ generals, equipments });
+});
+
+// Get User Collection (Owned IDs)
+app.get('/api/user/collection', authenticateToken, async (req, res) => {
+    const db = getDB();
+    const userId = req.user.id;
+    
+    const ownedGenerals = await db.all('SELECT DISTINCT general_id FROM user_generals WHERE user_id = ?', [userId]);
+    const ownedEquipments = await db.all('SELECT DISTINCT equipment_id FROM user_equipments WHERE user_id = ?', [userId]);
+    
+    res.json({
+        generalIds: ownedGenerals.map(r => r.general_id),
+        equipmentIds: ownedEquipments.map(r => r.equipment_id)
+    });
+});
+
 // Helper for Gacha Logic
 async function performSingleGacha(db, userId, userPity) {
     const roll = Math.random() * 100;
