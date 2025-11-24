@@ -15,6 +15,19 @@ export default function AdminApp() {
     // Add General State
     const [newG, setNewG] = useState({ name: '', stars: 3, str: 50, int: 50, ldr: 50, luck: 50, country: '群', avatar: 'https://picsum.photos/200', description: '' });
 
+    // Initial check for token to auto-login (Fixes unused useEffect and logic bug)
+    useEffect(() => {
+        if (token) {
+            setView('list');
+            fetchGenerals(token).catch(() => {
+                // If fetch fails (invalid token), logout
+                setToken('');
+                localStorage.removeItem('adminToken');
+                setView('login');
+            });
+        }
+    }, [token]);
+
     const login = async () => {
         const res = await fetch(`${API}/login`, {
             method: 'POST',
@@ -25,8 +38,7 @@ export default function AdminApp() {
         if (data.role === 'admin') {
             setToken(data.token);
             localStorage.setItem('adminToken', data.token);
-            setView('list');
-            fetchGenerals(data.token);
+            // View will update via useEffect
         } else {
             alert('Invalid admin credentials');
         }
@@ -34,7 +46,11 @@ export default function AdminApp() {
 
     const fetchGenerals = async (t: string) => {
         const res = await fetch(`${ADMIN_API}/generals`, { headers: { 'Authorization': `Bearer ${t}` } });
-        setGenerals(await res.json());
+        if (res.ok) {
+            setGenerals(await res.json());
+        } else {
+            throw new Error('Failed to fetch');
+        }
     };
 
     const addGeneral = async () => {
@@ -69,6 +85,11 @@ export default function AdminApp() {
                     <li className="p-2 bg-slate-700 rounded cursor-pointer">武将管理</li>
                     <li className="p-2 hover:bg-slate-700 rounded cursor-not-allowed opacity-50">装备配置</li>
                     <li className="p-2 hover:bg-slate-700 rounded cursor-not-allowed opacity-50">关卡配置</li>
+                    <li className="p-2 hover:bg-slate-700 rounded cursor-pointer text-red-400" onClick={() => {
+                        setToken('');
+                        localStorage.removeItem('adminToken');
+                        setView('login');
+                    }}>退出登录</li>
                 </ul>
             </aside>
             <main className="flex-1 p-8">
