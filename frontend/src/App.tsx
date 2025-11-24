@@ -1,7 +1,8 @@
+
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
 import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp } from 'lucide-react';
-import { User, General, UserGeneral, Campaign, COUNTRY_COLORS } from './types';
+import { User, General, UserGeneral, Campaign, COUNTRY_COLORS, STAR_STYLES } from './types';
 
 // --- API Service ---
 const API_URL = '/api';
@@ -308,15 +309,19 @@ const Gacha = () => {
                 <div className="w-full animate-fade-in-up text-center space-y-4 bg-stone-800 p-6 rounded-xl border border-amber-500/50 shadow-2xl">
                     <h3 className="text-xl text-amber-300">招募成功!</h3>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        {result.map((g, i) => (
-                            <div key={i} className="flex flex-col items-center p-2 bg-stone-900 rounded border border-stone-700">
-                                <img src={g.avatar} className="w-16 h-24 object-cover rounded border-2 border-amber-500" />
-                                <div className="text-sm font-bold mt-1">{g.name}</div>
-                                <div className="text-yellow-500 text-xs">{'★'.repeat(g.stars)}</div>
-                            </div>
-                        ))}
+                        {result.map((g, i) => {
+                             const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
+                             return (
+                                <div key={i} className={`flex flex-col items-center p-2 bg-stone-900 rounded border-2 ${style.border} relative overflow-hidden group`}>
+                                    <div className={`absolute inset-0 opacity-10 ${style.bg}`}></div>
+                                    <img src={g.avatar} className={`w-20 h-32 object-cover rounded border ${style.border} shadow-lg`} />
+                                    <div className={`text-sm font-bold mt-2 ${style.text}`}>{g.name}</div>
+                                    <div className={`${style.text} text-xs font-bold`}>{'★'.repeat(g.stars)}</div>
+                                </div>
+                             );
+                        })}
                     </div>
-                    <button onClick={() => setResult(null)} className="px-6 py-2 bg-stone-700 rounded hover:bg-stone-600 mt-4">继续</button>
+                    <button onClick={() => setResult(null)} className="px-6 py-2 bg-stone-700 rounded hover:bg-stone-600 mt-4 text-white">继续</button>
                 </div>
             ) : (
                 <div className="w-full max-w-sm bg-stone-800 rounded-xl border-2 border-dashed border-stone-700 flex flex-col items-center justify-center p-8 text-center space-y-4">
@@ -450,24 +455,28 @@ const Barracks = () => {
                     {team.length === 0 ? (
                         <div className="text-stone-500 text-sm italic w-full text-center py-4">暂无武将出战，请在下方列表选择上阵</div>
                     ) : (
-                        team.map(g => (
-                            <div key={g.uid} className="relative w-24 h-40 bg-stone-800 rounded border border-amber-600/50 flex flex-col shadow-lg shrink-0">
-                                <div className="h-full overflow-hidden relative">
-                                    <img src={g.avatar} className="w-full h-full object-cover" />
-                                    <div className={`absolute top-0 left-0 px-1.5 py-0.5 text-[10px] font-bold text-white ${COUNTRY_COLORS[g.country]}`}>
-                                        {g.country}
+                        team.map(g => {
+                            const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
+                            return (
+                                <div key={g.uid} className={`relative w-24 h-40 bg-stone-800 rounded border-2 ${style.border} flex flex-col ${style.shadow} shrink-0 overflow-hidden`}>
+                                    <div className="h-full overflow-hidden relative">
+                                        <div className={`absolute inset-0 opacity-20 ${style.bg}`}></div>
+                                        <img src={g.avatar} className="w-full h-full object-cover" />
+                                        <div className={`absolute top-0 left-0 px-1.5 py-0.5 text-[10px] font-bold text-white ${COUNTRY_COLORS[g.country]}`}>
+                                            {g.country}
+                                        </div>
+                                        {g.evolution > 0 && <div className="absolute top-0 right-0 px-1.5 py-0.5 text-[10px] font-bold text-red-400 bg-black/50">+{g.evolution}</div>}
                                     </div>
-                                    {g.evolution > 0 && <div className="absolute top-0 right-0 px-1.5 py-0.5 text-[10px] font-bold text-red-400 bg-black/50">+{g.evolution}</div>}
-                                </div>
-                                <div className="bg-gradient-to-t from-black to-transparent absolute bottom-0 w-full p-1 pt-4">
-                                    <div className="text-white font-bold text-xs text-center drop-shadow-md">{g.name}</div>
-                                    <div className="flex justify-between items-end text-[10px] text-stone-300 px-1 mt-1">
-                                        <span>Lv.{g.level}</span>
-                                        <span className="text-amber-400">{calculatePower(g)}</span>
+                                    <div className="bg-gradient-to-t from-black to-transparent absolute bottom-0 w-full p-1 pt-4">
+                                        <div className={`font-bold text-xs text-center drop-shadow-md ${style.text}`}>{g.name}</div>
+                                        <div className="flex justify-between items-end text-[10px] text-stone-300 px-1 mt-1">
+                                            <span>Lv.{g.level}</span>
+                                            <span className="text-amber-400">{calculatePower(g)}</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </div>
@@ -490,6 +499,7 @@ const Barracks = () => {
                         <tbody className="divide-y divide-stone-700">
                             {sortedGenerals.map(g => {
                                 const power = calculatePower(g);
+                                const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
                                 // Check if there is any other general with same template ID but different UID
                                 const hasMaterial = generals.some(m => m.id === g.id && m.uid !== g.uid);
 
@@ -497,19 +507,20 @@ const Barracks = () => {
                                 <tr key={g.uid} className={`hover:bg-stone-700/50 transition ${g.is_in_team ? 'bg-amber-900/10' : ''}`}>
                                     <td className="px-4 py-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="relative w-10 h-10 shrink-0">
-                                                <img src={g.avatar} className="w-10 h-10 rounded object-cover border border-stone-500" />
-                                                <div className={`absolute -top-1 -left-1 w-4 h-4 flex items-center justify-center text-[10px] text-white rounded-full ${COUNTRY_COLORS[g.country]}`}>
+                                            <div className="relative w-12 h-16 shrink-0 group">
+                                                <div className={`absolute inset-0 border-2 ${style.border} rounded pointer-events-none z-10`}></div>
+                                                <img src={g.avatar} className="w-full h-full rounded object-cover" />
+                                                <div className={`absolute -top-1 -left-1 w-4 h-4 flex items-center justify-center text-[10px] text-white rounded-full ${COUNTRY_COLORS[g.country]} z-20`}>
                                                     {g.country}
                                                 </div>
                                             </div>
                                             <div>
                                                 <div className="font-bold text-stone-100 flex items-center gap-1">
-                                                    {g.name} 
+                                                    <span className={style.text}>{g.name}</span>
                                                     {g.evolution > 0 && <span className="text-red-400">+{g.evolution}</span>}
                                                     {g.is_in_team && <Shield size={10} className="text-amber-500"/>}
                                                 </div>
-                                                <div className="text-xs text-yellow-600">{'★'.repeat(g.stars)} <span className="text-stone-500 ml-1">Lv.{g.level}</span></div>
+                                                <div className={`text-xs ${style.text}`}>{'★'.repeat(g.stars)} <span className="text-stone-500 ml-1">Lv.{g.level}</span></div>
                                             </div>
                                         </div>
                                     </td>

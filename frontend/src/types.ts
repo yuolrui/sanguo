@@ -53,8 +53,16 @@ export interface Campaign {
 }
 
 export const COUNTRY_COLORS: Record<string, string> = {
-    '魏': 'bg-blue-600',
-    '蜀': 'bg-green-600',
-    '吴': 'bg-red-600',
-    '群': 'bg-gray-600'
+    '魏': 'bg-blue-700',
+    '蜀': 'bg-green-700',
+    '吴': 'bg-red-700',
+    '群': 'bg-gray-700'
+};
+
+export const STAR_STYLES: Record<number, { border: string, text: string, bg: string, shadow: string, ring: string }> = {
+    1: { border: 'border-stone-500', text: 'text-stone-500', bg: 'bg-stone-500/10', shadow: 'shadow-none', ring: 'ring-stone-500' },
+    2: { border: 'border-green-500', text: 'text-green-500', bg: 'bg-green-500/10', shadow: 'shadow-green-900/20', ring: 'ring-green-500' },
+    3: { border: 'border-blue-500', text: 'text-blue-500', bg: 'bg-blue-500/10', shadow: 'shadow-blue-900/30', ring: 'ring-blue-500' },
+    4: { border: 'border-purple-500', text: 'text-purple-400', bg: 'bg-purple-500/10', shadow: 'shadow-purple-900/40', ring: 'ring-purple-500' },
+    5: { border: 'border-amber-400', text: 'text-amber-400', bg: 'bg-amber-500/10', shadow: 'shadow-amber-600/50', ring: 'ring-amber-400' },
 };
