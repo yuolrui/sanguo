@@ -4,6 +4,16 @@ import bcryptjs from 'bcryptjs';
 
 let db;
 
+// Helper to generate consistent, high-quality Koei-style art URLs
+const getAvatar = (keywords) => {
+    // Base style prompt
+    const style = "hyper realistic digital art portrait, Koei Romance of the Three Kingdoms style, ancient chinese general, intricate armor, detailed face, cinematic lighting, 8k resolution, oil painting texture";
+    const prompt = encodeURIComponent(`${keywords}, ${style}`);
+    // Using a consistent seed based on the prompt length + first char code to keep it stable but unique per character
+    const seed = keywords.length + keywords.charCodeAt(0);
+    return `https://image.pollinations.ai/prompt/${prompt}?width=200&height=300&nologo=true&seed=${seed}`;
+};
+
 export async function initDB() {
   console.log('Initializing Database...');
   db = await open({
@@ -82,31 +92,82 @@ export async function initDB() {
     );
   `);
 
-  // Seed Data
-  const count = await db.get('SELECT count(*) as c FROM generals');
-  if (count.c === 0) {
-    console.log('Seeding Database...');
-    // Using 200x300 for portrait style cards to match Koei style
-    const generals = [
-      { name: '关羽', stars: 5, str: 98, int: 75, ldr: 95, luck: 60, country: '蜀', avatar: 'https://picsum.photos/seed/guanyu_v2/200/300', description: '五虎上将之首，义薄云天。' },
-      { name: '曹操', stars: 5, str: 85, int: 96, ldr: 99, luck: 80, country: '魏', avatar: 'https://picsum.photos/seed/caocao_v2/200/300', description: '乱世枭雄，魏武帝。' },
-      { name: '吕布', stars: 5, str: 100, int: 30, ldr: 80, luck: 40, country: '群', avatar: 'https://picsum.photos/seed/lubu_v2/200/300', description: '人中吕布，马中赤兔。' },
-      { name: '周瑜', stars: 5, str: 70, int: 98, ldr: 96, luck: 70, country: '吴', avatar: 'https://picsum.photos/seed/zhouyu_v2/200/300', description: '火烧赤壁，英姿飒爽。' },
-      { name: '赵云', stars: 4, str: 96, int: 70, ldr: 85, luck: 90, country: '蜀', avatar: 'https://picsum.photos/seed/zhaoyun_v2/200/300', description: '常山赵子龙，浑身是胆。' },
-      { name: '张辽', stars: 4, str: 92, int: 80, ldr: 93, luck: 70, country: '魏', avatar: 'https://picsum.photos/seed/zhangliao_v2/200/300', description: '威震逍遥津。' },
-      { name: '甘宁', stars: 4, str: 94, int: 60, ldr: 88, luck: 50, country: '吴', avatar: 'https://picsum.photos/seed/ganning_v2/200/300', description: '百骑劫魏营。' },
-      { name: '廖化', stars: 3, str: 75, int: 60, ldr: 70, luck: 80, country: '蜀', avatar: 'https://picsum.photos/seed/liaohua_v2/200/300', description: '蜀中无大将，廖化作先锋。' },
-      { name: '潘凤', stars: 3, str: 70, int: 40, ldr: 60, luck: 10, country: '群', avatar: 'https://picsum.photos/seed/panfeng_v2/200/300', description: '无双上将。' },
-      { name: '邢道荣', stars: 2, str: 60, int: 30, ldr: 50, luck: 20, country: '群', avatar: 'https://picsum.photos/seed/xingdaorong_v2/200/300', description: '零陵上将。' },
-    ];
+  // Seed Data Definition
+  const generalsList = [
+      { 
+        name: '关羽', stars: 5, str: 98, int: 75, ldr: 95, luck: 60, country: '蜀', 
+        avatar: getAvatar('Guan Yu, red face, long black beard, green robe, holding Guandao weapon, fierce eyes'), 
+        description: '五虎上将之首，义薄云天。' 
+      },
+      { 
+        name: '曹操', stars: 5, str: 85, int: 96, ldr: 99, luck: 80, country: '魏', 
+        avatar: getAvatar('Cao Cao, ambitious ruler, purple and blue ornate robes, holding sword, calculating expression, villain hero'), 
+        description: '乱世枭雄，魏武帝。' 
+      },
+      { 
+        name: '吕布', stars: 5, str: 100, int: 30, ldr: 80, luck: 40, country: '群', 
+        avatar: getAvatar('Lu Bu, fearsome warrior, long pheasant tail feathers on helmet, black and gold armor, holding sky piercer halberd, intense gaze'), 
+        description: '人中吕布，马中赤兔。' 
+      },
+      { 
+        name: '周瑜', stars: 5, str: 70, int: 98, ldr: 96, luck: 70, country: '吴', 
+        avatar: getAvatar('Zhou Yu, handsome strategist, red armor, playing musical instrument, fire in background, young commander'), 
+        description: '火烧赤壁，英姿飒爽。' 
+      },
+      { 
+        name: '赵云', stars: 4, str: 96, int: 70, ldr: 85, luck: 90, country: '蜀', 
+        avatar: getAvatar('Zhao Yun, handsome general, shining silver armor, white robe, holding silver spear, brave expression'), 
+        description: '常山赵子龙，浑身是胆。' 
+      },
+      { 
+        name: '张辽', stars: 4, str: 92, int: 80, ldr: 93, luck: 70, country: '魏', 
+        avatar: getAvatar('Zhang Liao, stoic general, blue and gold heavy armor, dual axes, wei kingdom commander, mustache'), 
+        description: '威震逍遥津。' 
+      },
+      { 
+        name: '甘宁', stars: 4, str: 94, int: 60, ldr: 88, luck: 50, country: '吴', 
+        avatar: getAvatar('Gan Ning, pirate general, shirtless with tattoos, wearing bells, feathers in hair, wild look, holding sword'), 
+        description: '百骑劫魏营。' 
+      },
+      { 
+        name: '廖化', stars: 3, str: 75, int: 60, ldr: 70, luck: 80, country: '蜀', 
+        avatar: getAvatar('Liao Hua, veteran old soldier, weathered face, standard shu leather armor, holding spear, loyal look'), 
+        description: '蜀中无大将，廖化作先锋。' 
+      },
+      { 
+        name: '潘凤', stars: 3, str: 70, int: 40, ldr: 60, luck: 10, country: '群', 
+        avatar: getAvatar('General Pan Feng, holding huge axe, heavy bulky armor, confident face, mustache'), 
+        description: '无双上将。' 
+      },
+      { 
+        name: '邢道荣', stars: 2, str: 60, int: 30, ldr: 50, luck: 20, country: '群', 
+        avatar: getAvatar('Xing Daorong, arrogant general, heavy armor, holding large battle axe, beard, laughing'), 
+        description: '零陵上将。' 
+      },
+  ];
 
-    for (const g of generals) {
+  // Check if generals exist
+  const count = await db.get('SELECT count(*) as c FROM generals');
+  
+  if (count.c === 0) {
+    console.log('Seeding Database with Generals...');
+    for (const g of generalsList) {
       await db.run(
         `INSERT INTO generals (name, stars, str, int, ldr, luck, country, avatar, description) VALUES (?,?,?,?,?,?,?,?,?)`,
         [g.name, g.stars, g.str, g.int, g.ldr, g.luck, g.country, g.avatar, g.description]
       );
     }
+  } else {
+    // UPDATE EXISTING AVATARS to match the new style
+    console.log('Updating existing generals with new visuals...');
+    for (const g of generalsList) {
+        await db.run('UPDATE generals SET avatar = ? WHERE name = ?', [g.avatar, g.name]);
+    }
+  }
 
+  // Seed Campaigns & Equipment (Only if table is empty to avoid dupes on restart)
+  const campCount = await db.get('SELECT count(*) as c FROM campaigns');
+  if (campCount.c === 0) {
     const campaigns = [
       { name: '黄巾之乱', req_power: 100, gold: 100, exp: 50 },
       { name: '虎牢关之战', req_power: 500, gold: 300, exp: 150 },
