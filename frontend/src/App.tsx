@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
-import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Search } from 'lucide-react';
+import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS, STAR_STYLES } from './types';
 
 // --- API Service ---
