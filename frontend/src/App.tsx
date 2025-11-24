@@ -856,7 +856,7 @@ const Barracks = () => {
         load();
     };
 
-    // Sort Team by Power
+    // Sort Team by Power (Descending)
     const team = generals
         .filter(g => g.is_in_team)
         .sort((a, b) => calculatePower(b) - calculatePower(a));
@@ -889,18 +889,18 @@ const Barracks = () => {
                         team.map(g => {
                             const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
                             return (
-                                <div key={g.uid} className={`relative w-20 md:w-24 h-32 md:h-40 bg-stone-800 rounded border-2 ${style.border} flex flex-col ${style.shadow} shrink-0 overflow-hidden`}>
+                                <div key={g.uid} className={`relative w-16 md:w-24 h-24 md:h-40 bg-stone-800 rounded border-2 ${style.border} flex flex-col ${style.shadow} shrink-0 overflow-hidden`}>
                                     <div className="h-full overflow-hidden relative">
                                         <div className={`absolute inset-0 opacity-20 ${style.bg}`}></div>
                                         <img src={g.avatar} className="w-full h-full object-cover" />
-                                        <div className={`absolute top-0 left-0 px-1.5 py-0.5 text-[9px] md:text-[10px] font-bold text-white ${COUNTRY_COLORS[g.country]}`}>
+                                        <div className={`absolute top-0 left-0 px-1 py-0.5 text-[8px] md:text-[10px] font-bold text-white ${COUNTRY_COLORS[g.country]}`}>
                                             {g.country}
                                         </div>
-                                        {g.evolution > 0 && <div className="absolute top-0 right-0 px-1.5 py-0.5 text-[9px] md:text-[10px] font-bold text-red-400 bg-black/50">+{g.evolution}</div>}
+                                        {g.evolution > 0 && <div className="absolute top-0 right-0 px-1 py-0.5 text-[8px] md:text-[10px] font-bold text-red-400 bg-black/50">+{g.evolution}</div>}
                                     </div>
-                                    <div className="bg-gradient-to-t from-black to-transparent absolute bottom-0 w-full p-1 pt-4">
-                                        <div className={`font-bold text-[10px] md:text-xs text-center drop-shadow-md truncate ${style.text}`}>{g.name}</div>
-                                        <div className="flex justify-between items-end text-[9px] md:text-[10px] text-stone-300 px-1 mt-1">
+                                    <div className="bg-gradient-to-t from-black to-transparent absolute bottom-0 w-full p-1 pt-3">
+                                        <div className={`font-bold text-[8px] md:text-xs text-center drop-shadow-md truncate ${style.text}`}>{g.name}</div>
+                                        <div className="flex justify-between items-end text-[8px] md:text-[10px] text-stone-300 px-0.5 mt-0.5">
                                             <span>Lv.{g.level}</span>
                                             <span className="text-amber-400">{calculatePower(g)}</span>
                                         </div>
