@@ -369,21 +369,21 @@ const Gacha = () => {
                         <h3 className={`text-xl md:text-2xl font-bold mb-4 md:mb-6 ${hasLegendary ? 'text-amber-300 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-stone-300'}`}>
                             {hasLegendary ? '✨ 传说降临! ✨' : '招募完成'}
                         </h3>
-                        <div className="grid grid-cols-3 gap-2 md:grid-cols-5 md:gap-4 max-h-[60vh] overflow-y-auto scrollbar-hide">
+                        <div className="grid grid-cols-5 gap-1.5 md:grid-cols-5 md:gap-4 overflow-hidden">
                             {result.map((g, i) => {
                                  const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
                                  const isFiveStar = g.stars === 5;
                                  return (
-                                    <div key={i} style={{ animationDelay: `${i * 100}ms` }} className={`animate-card-appear flex flex-col items-center p-1 md:p-2 bg-stone-900 rounded-lg border-2 ${style.border} relative overflow-hidden group transform transition-all duration-300 ${isFiveStar ? 'shadow-[0_0_15px_rgba(251,191,36,0.4)]' : ''}`}>
+                                    <div key={i} style={{ animationDelay: `${i * 50}ms` }} className={`animate-card-appear flex flex-col items-center p-0.5 md:p-2 bg-stone-900 rounded border ${style.border} relative overflow-hidden group transform transition-all duration-300 ${isFiveStar ? 'shadow-[0_0_10px_rgba(251,191,36,0.5)]' : ''}`}>
                                         <div className={`absolute inset-0 opacity-10 ${style.bg}`}></div>
-                                        {isFiveStar && <div className="absolute inset-0 bg-gradient-to-t from-amber-500/20 to-transparent animate-pulse"></div>}
-                                        <div className="relative w-full aspect-[2/3] overflow-hidden rounded border border-stone-800">
+                                        {isFiveStar && <div className="absolute inset-0 bg-gradient-to-t from-amber-500/30 to-transparent animate-pulse"></div>}
+                                        <div className="relative w-full aspect-[2/3] overflow-hidden rounded-[2px] border border-stone-800">
                                             <img src={g.avatar} className="w-full h-full object-cover" />
                                         </div>
-                                        <div className={`text-[10px] md:text-sm font-bold mt-1 md:mt-2 ${style.text} truncate w-full text-center`}>{g.name}</div>
-                                        <div className="flex items-center gap-0.5 md:gap-1 mt-0.5 md:mt-1">
+                                        <div className={`text-[8px] md:text-sm font-bold mt-0.5 md:mt-2 ${style.text} truncate w-full text-center leading-none`}>{g.name}</div>
+                                        <div className="flex items-center justify-center gap-px mt-0.5">
                                             {Array.from({length: g.stars}).map((_, si) => (
-                                                <Star key={si} size={isFiveStar ? 8 : 6} className={`${isFiveStar ? 'text-amber-400 fill-amber-400' : 'text-stone-500 fill-stone-500'}`} />
+                                                <Star key={si} size={isFiveStar ? 6 : 5} className={`${isFiveStar ? 'text-amber-400 fill-amber-400' : 'text-stone-600 fill-stone-600'}`} />
                                             ))}
                                         </div>
                                     </div>
