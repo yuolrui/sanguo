@@ -67,8 +67,8 @@ const api = {
         const res = await fetch(`${API_URL}/equip/unequip`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ generalUid }) });
         return res.json();
     },
-    evolve: async (token: string, targetUid: number, materialUid: number) => {
-        const res = await fetch(`${API_URL}/general/evolve`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUid, materialUid }) });
+    evolve: async (token: string, targetUid: number) => {
+        const res = await fetch(`${API_URL}/general/evolve`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUid }) });
         return res.json();
     }
 };
@@ -419,6 +419,7 @@ const Gacha = () => {
                                     <div key={i} style={{ animationDelay: `${i * 100}ms` }} className={`animate-card-appear flex flex-col items-center p-0.5 md:p-2 bg-stone-900 rounded border ${style.border} relative overflow-hidden group transform transition-all duration-300 ${isFiveStar ? 'shadow-[0_0_15px_rgba(251,191,36,0.6)] z-10 scale-105' : ''}`}>
                                         <div className={`absolute inset-0 opacity-10 ${style.bg}`}></div>
                                         {isFiveStar && <div className="absolute inset-0 bg-gradient-to-t from-amber-500/30 to-transparent animate-pulse"></div>}
+                                        {g.converted && <div className="absolute top-0 right-0 bg-blue-600/90 text-white text-[8px] px-1 rounded-bl z-20 font-bold">碎片 x10</div>}
                                         <div className="relative w-full aspect-[2/3] overflow-hidden rounded-[2px] border border-stone-800">
                                             <img src={g.avatar} className="w-full h-full object-cover" />
                                         </div>
@@ -842,20 +843,13 @@ const Barracks = () => {
         load();
     };
 
-    const handleEvolve = async (targetUid: number, generalId: number) => {
+    const handleEvolve = async (targetUid: number) => {
         if(!token) return;
-        const duplicate = generals.find(g => g.uid !== targetUid && g.id === generalId && !g.is_in_team)
-                       || generals.find(g => g.uid !== targetUid && g.id === generalId);
         
-        if (!duplicate) {
-            return toast.show('需要相同的武将作为素材', 'error');
-        }
+        // No longer need to find duplicate instances
+        // API handles shard consumption
         
-        if (duplicate.is_in_team) {
-             if(!confirm('素材武将正在队伍中，确定要消耗吗？')) return;
-        }
-
-        const res = await api.evolve(token, targetUid, duplicate.uid);
+        const res = await api.evolve(token, targetUid);
         if (res.error) return toast.show(res.error, 'error');
         
         toast.show('武将进阶成功！战力大幅提升！', 'success');
@@ -951,7 +945,8 @@ const Barracks = () => {
                     {sortedGenerals.map(g => {
                         const power = calculatePower(g);
                         const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
-                        const hasMaterial = generals.some(m => m.id === g.id && m.uid !== g.uid);
+                        const shardCount = g.shard_count || 0;
+                        const canEvolve = shardCount >= 10;
 
                         return (
                             <div key={g.uid} className={`bg-stone-800 rounded-lg p-3 border border-stone-700 flex gap-3 shadow-md ${g.is_in_team ? 'bg-amber-900/10 border-amber-800/50 ring-1 ring-amber-800/30' : ''}`}>
@@ -980,6 +975,16 @@ const Barracks = () => {
                                          </div>
                                     </div>
 
+                                    {/* Shard Progress */}
+                                    <div className="mt-1.5 flex items-center gap-2">
+                                        <div className="flex-1 h-1.5 bg-stone-900 rounded-full overflow-hidden border border-stone-600/50">
+                                            <div className="h-full bg-purple-500 transition-all duration-300" style={{width: `${Math.min(shardCount * 10, 100)}%`}}></div>
+                                        </div>
+                                        <div className="text-[9px] text-stone-400 font-mono whitespace-nowrap">
+                                            碎片: {shardCount}/10
+                                        </div>
+                                    </div>
+
                                     {/* Middle: Stats & Equip Icons */}
                                     <div className="flex justify-between items-end mt-1">
                                          <div className="text-[10px] font-mono opacity-80 space-x-2 text-stone-300">
@@ -1004,9 +1009,9 @@ const Barracks = () => {
                                     {/* Bottom: Actions */}
                                     <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-stone-700/50">
                                         <button 
-                                            onClick={() => hasMaterial ? handleEvolve(g.uid, g.id) : toast.show('需要相同的武将作为素材才能进阶', 'info')} 
+                                            onClick={() => canEvolve ? handleEvolve(g.uid) : toast.show(`需要10个碎片才能进阶 (当前: ${shardCount})`, 'info')} 
                                             className={`px-2 py-1 rounded text-xs border flex items-center gap-1 transition ${
-                                                hasMaterial 
+                                                canEvolve 
                                                 ? 'bg-purple-900/50 hover:bg-purple-800 text-purple-200 border-purple-700 animate-pulse active:scale-95' 
                                                 : 'bg-stone-800 text-stone-600 border-stone-700 opacity-50 cursor-not-allowed'
                                             }`}

@@ -18,6 +18,7 @@ export interface General {
     country: string;
     avatar: string;
     description: string;
+    converted?: boolean;
 }
 
 export interface Equipment {
@@ -40,6 +41,7 @@ export interface UserGeneral extends General {
     is_in_team: boolean;
     evolution: number;
     equipments: UserEquipment[];
+    shard_count: number;
 }
 
 export interface Campaign {

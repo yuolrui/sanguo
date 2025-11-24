@@ -72,13 +72,15 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   res.json(user);
 });
 
-// Get User Generals (with equipment)
+// Get User Generals (with equipment and shards)
 app.get('/api/user/generals', authenticateToken, async (req, res) => {
   const db = getDB();
   const generals = await db.all(`
-    SELECT ug.id as uid, g.*, ug.level, ug.exp, ug.is_in_team, ug.evolution
+    SELECT ug.id as uid, g.*, ug.level, ug.exp, ug.is_in_team, ug.evolution,
+           COALESCE(us.count, 0) as shard_count
     FROM user_generals ug 
     JOIN generals g ON ug.general_id = g.id 
+    LEFT JOIN user_shards us ON ug.user_id = us.user_id AND ug.general_id = us.general_id
     WHERE ug.user_id = ?`, [req.user.id]);
 
   // Fetch equipments for these generals
@@ -137,9 +139,18 @@ async function performSingleGacha(db, userId, userPity) {
     const pool = await db.all('SELECT * FROM generals WHERE stars = ?', [star]);
     const winner = pool[Math.floor(Math.random() * pool.length)] || pool[0];
 
-    await db.run('INSERT INTO user_generals (user_id, general_id) VALUES (?, ?)', [userId, winner.id]);
-    
-    return { winner, newPity };
+    // Check if user already has this general
+    const existing = await db.get('SELECT id FROM user_generals WHERE user_id = ? AND general_id = ?', [userId, winner.id]);
+
+    if (existing) {
+        // Convert to shards
+        await db.run(`INSERT INTO user_shards (user_id, general_id, count) VALUES (?, ?, 10)
+                      ON CONFLICT(user_id, general_id) DO UPDATE SET count = count + 10`, [userId, winner.id]);
+        return { winner, newPity, converted: true };
+    } else {
+        await db.run('INSERT INTO user_generals (user_id, general_id) VALUES (?, ?)', [userId, winner.id]);
+        return { winner, newPity, converted: false };
+    }
 }
 
 // Single Gacha
@@ -151,10 +162,10 @@ app.post('/api/gacha', authenticateToken, async (req, res) => {
   
   await db.run('UPDATE users SET tokens = tokens - 1 WHERE id = ?', [req.user.id]);
   
-  const { winner, newPity } = await performSingleGacha(db, req.user.id, user.pity_counter);
+  const { winner, newPity, converted } = await performSingleGacha(db, req.user.id, user.pity_counter);
   await db.run('UPDATE users SET pity_counter = ? WHERE id = ?', [newPity, req.user.id]);
   
-  res.json({ general: winner });
+  res.json({ general: { ...winner, converted } });
 });
 
 // 10x Gacha
@@ -170,9 +181,9 @@ app.post('/api/gacha/ten', authenticateToken, async (req, res) => {
     const results = [];
 
     for (let i = 0; i < 10; i++) {
-        const { winner, newPity } = await performSingleGacha(db, req.user.id, currentPity);
+        const { winner, newPity, converted } = await performSingleGacha(db, req.user.id, currentPity);
         currentPity = newPity;
-        results.push(winner);
+        results.push({ ...winner, converted });
     }
     
     await db.run('UPDATE users SET pity_counter = ? WHERE id = ?', [currentPity, req.user.id]);
@@ -253,25 +264,22 @@ app.post('/api/equip/unequip', authenticateToken, async (req, res) => {
     res.json({ success: true });
 });
 
-// Evolve General
+// Evolve General (Consumes Shards)
 app.post('/api/general/evolve', authenticateToken, async (req, res) => {
-    const { targetUid, materialUid } = req.body;
+    const { targetUid } = req.body;
     const userId = req.user.id;
     const db = getDB();
 
-    if (targetUid === materialUid) return res.status(400).json({ error: 'Cannot consume self' });
-
-    // Verify ownership and type
+    // Verify ownership
     const target = await db.get('SELECT * FROM user_generals WHERE id = ? AND user_id = ?', [targetUid, userId]);
-    const material = await db.get('SELECT * FROM user_generals WHERE id = ? AND user_id = ?', [materialUid, userId]);
+    if (!target) return res.status(404).json({ error: 'General not found' });
 
-    if (!target || !material) return res.status(404).json({ error: 'General not found' });
-    if (target.general_id !== material.general_id) return res.status(400).json({ error: 'Must be same general type' });
+    // Check shards
+    const shards = await db.get('SELECT count FROM user_shards WHERE user_id = ? AND general_id = ?', [userId, target.general_id]);
+    if (!shards || shards.count < 10) return res.status(400).json({ error: 'Not enough shards (Need 10)' });
 
-    // Consume material
-    await db.run('DELETE FROM user_generals WHERE id = ?', [materialUid]);
-    // Return material's equipment to inventory
-    await db.run('UPDATE user_equipments SET general_id = NULL WHERE general_id = ?', [materialUid]);
+    // Consume 10 shards
+    await db.run('UPDATE user_shards SET count = count - 10 WHERE user_id = ? AND general_id = ?', [userId, target.general_id]);
 
     // Evolve target
     await db.run('UPDATE user_generals SET evolution = evolution + 1 WHERE id = ?', [targetUid]);

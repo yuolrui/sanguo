@@ -58,6 +58,15 @@ export async function initDB() {
       FOREIGN KEY(general_id) REFERENCES generals(id)
     );
 
+    CREATE TABLE IF NOT EXISTS user_shards (
+      user_id INTEGER,
+      general_id INTEGER,
+      count INTEGER DEFAULT 0,
+      PRIMARY KEY (user_id, general_id),
+      FOREIGN KEY(user_id) REFERENCES users(id),
+      FOREIGN KEY(general_id) REFERENCES generals(id)
+    );
+
     CREATE TABLE IF NOT EXISTS equipments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT,
