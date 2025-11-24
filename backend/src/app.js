@@ -279,13 +279,14 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
   
   // Calculate user power (Base + Evolution + Equipment)
   const team = await db.all(`
-    SELECT ug.id, g.str, g.int, g.ldr, ug.level, ug.evolution 
+    SELECT ug.id, g.name, g.country, g.str, g.int, g.ldr, ug.level, ug.evolution 
     FROM user_generals ug 
     JOIN generals g ON ug.general_id = g.id 
     WHERE ug.user_id = ? AND ug.is_in_team = 1`, [req.user.id]);
     
-  let totalPower = 0;
   if (team.length === 0) return res.status(400).json({error: 'Please form a team first'});
+
+  let rawTotalPower = 0;
 
   for (const m of team) {
     let evolutionBonus = 1 + (m.evolution || 0) * 0.1; // 10% per evolution
@@ -299,10 +300,45 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
         WHERE ue.general_id = ?
     `, [m.id]);
     equips.forEach(e => generalPower += e.stat_bonus);
-    totalPower += generalPower;
+    rawTotalPower += generalPower;
   }
 
-  const win = totalPower >= campaign.req_power || Math.random() > 0.8; // 20% luck
+  // --- BOND CALCULATION ---
+  let bondMultiplier = 1.0;
+  const teamNames = team.map(g => g.name);
+  const teamCountries = team.map(g => g.country);
+
+  // 1. Faction Bond (>= 3 Same Country)
+  const countryCounts = {};
+  teamCountries.forEach(c => countryCounts[c] = (countryCounts[c] || 0) + 1);
+  if (Object.values(countryCounts).some(count => count >= 3)) {
+      bondMultiplier += 0.10; // 10% bonus
+  }
+
+  // 2. Peach Garden Oath (Liu Bei, Guan Yu, Zhang Fei)
+  const bondPeach = ['刘备', '关羽', '张飞'];
+  if (bondPeach.every(n => teamNames.includes(n))) {
+      bondMultiplier += 0.20; // 20% bonus
+  }
+
+  // 3. Five Tiger Generals (Needs >= 3)
+  const bondTigers = ['关羽', '张飞', '赵云', '马超', '黄忠'];
+  const tigerCount = teamNames.filter(n => bondTigers.includes(n)).length;
+  if (tigerCount >= 3) {
+      bondMultiplier += 0.15; // 15% bonus
+  }
+
+  // 4. Five Elite Generals (Wei) (Needs >= 3)
+  const bondElites = ['张辽', '张郃', '徐晃', '于禁', '乐进'];
+  const eliteCount = teamNames.filter(n => bondElites.includes(n)).length;
+  if (eliteCount >= 3) {
+      bondMultiplier += 0.15; // 15% bonus
+  }
+
+  const finalPower = Math.floor(rawTotalPower * bondMultiplier);
+  // --- END BOND CALCULATION ---
+
+  const win = finalPower >= campaign.req_power || Math.random() > 0.8; // 20% luck
   
   if (win) {
     await db.run('UPDATE users SET gold = gold + ? WHERE id = ?', [campaign.gold_drop, req.user.id]);

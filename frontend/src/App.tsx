@@ -1,7 +1,6 @@
-
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
-import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp } from 'lucide-react';
+import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS, STAR_STYLES } from './types';
 
 // --- API Service ---
@@ -353,6 +352,23 @@ const calculatePower = (g: UserGeneral) => {
     return Math.floor(basePower + equipPower);
 };
 
+// --- Bond Logic Definitions ---
+const BONDS = [
+    { name: '桃园结义', desc: '刘备、关羽、张飞同时上阵', boost: '战力+20%', condition: (names: string[]) => ['刘备', '关羽', '张飞'].every(n => names.includes(n)) },
+    { name: '五虎上将', desc: '关羽/张飞/赵云/马超/黄忠 (≥3人)', boost: '战力+15%', condition: (names: string[]) => ['关羽', '张飞', '赵云', '马超', '黄忠'].filter(n => names.includes(n)).length >= 3 },
+    { name: '五子良将', desc: '张辽/张郃/徐晃/于禁/乐进 (≥3人)', boost: '战力+15%', condition: (names: string[]) => ['张辽', '张郃', '徐晃', '于禁', '乐进'].filter(n => names.includes(n)).length >= 3 },
+    { name: '魏国精锐', desc: '魏国武将 ≥ 3人', boost: '战力+10%', condition: (names: string[], countries: string[]) => countries.filter(c => c === '魏').length >= 3 },
+    { name: '蜀汉英杰', desc: '蜀国武将 ≥ 3人', boost: '战力+10%', condition: (names: string[], countries: string[]) => countries.filter(c => c === '蜀').length >= 3 },
+    { name: '江东虎臣', desc: '吴国武将 ≥ 3人', boost: '战力+10%', condition: (names: string[], countries: string[]) => countries.filter(c => c === '吴').length >= 3 },
+    { name: '群雄割据', desc: '群雄武将 ≥ 3人', boost: '战力+10%', condition: (names: string[], countries: string[]) => countries.filter(c => c === '群').length >= 3 },
+];
+
+const getActiveBonds = (team: UserGeneral[]) => {
+    const names = team.map(g => g.name);
+    const countries = team.map(g => g.country);
+    return BONDS.filter(b => b.condition(names, countries));
+};
+
 // --- New Barracks View (Koei Style) ---
 const Barracks = () => {
     const { token } = useAuth();
@@ -433,6 +449,9 @@ const Barracks = () => {
         .filter(g => g.is_in_team)
         .sort((a, b) => calculatePower(b) - calculatePower(a));
 
+    // Calculate Active Bonds
+    const activeBonds = getActiveBonds(team);
+    
     // Sort Roster by Stars (desc) then Power (desc)
     const sortedGenerals = [...generals].sort((a, b) => {
         if (b.stars !== a.stars) return b.stars - a.stars;
@@ -480,6 +499,28 @@ const Barracks = () => {
                     )}
                 </div>
             </div>
+
+            {/* Bond Display */}
+            {team.length > 0 && (
+                <div className="bg-stone-800/50 rounded-lg p-3 border border-stone-700 flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-stone-400 text-xs uppercase font-bold tracking-wider">
+                        <LinkIcon size={12} /> 激活羁绊
+                    </div>
+                    {activeBonds.length === 0 ? (
+                        <div className="text-stone-600 text-sm italic">暂无激活羁绊 (尝试组合特定武将或同阵营)</div>
+                    ) : (
+                        <div className="flex flex-wrap gap-2">
+                            {activeBonds.map((b, i) => (
+                                <div key={i} className="flex items-center gap-1.5 bg-amber-900/30 border border-amber-700/50 px-2 py-1 rounded text-xs text-amber-200">
+                                    <Zap size={10} className="text-amber-400" />
+                                    <span className="font-bold">{b.name}</span>
+                                    <span className="text-amber-400/70">({b.boost})</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* 3. General List (Table) */}
             <div className="bg-stone-800 rounded-lg shadow border border-stone-700 overflow-hidden">
