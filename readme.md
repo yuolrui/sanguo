@@ -29,6 +29,77 @@ project-root/
 
 ---
 
+## 🔧 Nginx 关键配置示例 (核心)
+
+这是部署成功的关键。请将以下配置复制到您的 Nginx 配置文件中，并**务必修改 `/absolute/path/to/...` 为您服务器上的实际绝对路径**。
+
+```nginx
+worker_processes  1;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+
+    # =========================================
+    # 1. 游戏主站 (Frontend) -> 监听 80 端口
+    # =========================================
+    server {
+        listen       80;
+        server_name  localhost;
+
+        # 【关键修改点】指向 frontend 下的 dist 目录
+        # 例如: C:/Projects/sanguo/frontend/dist 或 /var/www/sanguo/frontend/dist
+        root   /absolute/path/to/your/project/frontend/dist;
+        
+        index  index.html index.htm;
+
+        # 支持 React Router 的 History 模式 (刷新页面不报 404)
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+
+        # 代理后端 API 请求 (转发到 Node.js 3000 端口)
+        location /api/ {
+            proxy_pass http://localhost:3000/api/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }
+
+    # =========================================
+    # 2. 管理后台 (Admin) -> 监听 8080 端口
+    # =========================================
+    server {
+        listen       8080;
+        server_name  localhost;
+
+        # 【关键修改点】指向 admin 下的 dist 目录
+        root   /absolute/path/to/your/project/admin/dist;
+        
+        index  index.html index.htm;
+
+        # 支持 React Router 的 History 模式
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+
+        # 代理后台 API 请求
+        location /admin/ {
+            proxy_pass http://localhost:3000/admin/;
+            proxy_set_header Host $host;
+        }
+    }
+}
+```
+
+---
+
 ## 🚀 详细部署流程
 
 ### 1. 准备工作
@@ -51,7 +122,6 @@ npm run build
 ```
 
 *   **检查结果**：请查看 `frontend/dist` 文件夹是否存在。
-*   **部署路径**：在 Nginx 中指向 `.../frontend/dist`。
 
 ### 3. 构建管理后台 (Admin)
 
@@ -68,7 +138,6 @@ npm run build
 ```
 
 *   **检查结果**：请查看 `admin/dist` 文件夹是否存在。
-*   **部署路径**：在 Nginx 中指向 `.../admin/dist`。
 
 ### 4. 启动后端 (Backend)
 
@@ -80,14 +149,12 @@ npm start
 ```
 后端将在 `3000` 端口运行，并自动生成 `sanguo.db` 数据库文件。
 
-### 5. 配置 Nginx
+### 5. 最终检查
 
-使用项目根目录下的 `nginx.conf` 作为模板。
-
-1.  打开 `nginx.conf`。
-2.  找到 `server 80` (Frontend) 部分，修改 `root` 为你的 **frontend/dist 绝对路径**。
-3.  找到 `server 8080` (Admin) 部分，修改 `root` 为你的 **admin/dist 绝对路径**。
-4.  重新加载 Nginx：`nginx -s reload`。
+1.  确保 Nginx 已启动并加载了上述配置。
+2.  确保 Backend 正在运行。
+3.  访问 `http://localhost` 开始游戏。
+4.  访问 `http://localhost:8080` 管理后台。
 
 ---
 
