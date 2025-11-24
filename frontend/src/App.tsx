@@ -583,7 +583,11 @@ const Gallery = () => {
 
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-1 text-[10px] text-stone-400">
-                                        <Gift size={10} />
+                                        <Landmark size={10} className="text-stone-500" />
+                                        <span>获取方式: <span className="text-stone-300">聚贤庄</span></span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-[10px] text-stone-400">
+                                        <Gift size={10} className="text-stone-500" />
                                         <span>招募概率: <span className="text-amber-500 font-bold">{getProb(g.stars)}</span></span>
                                     </div>
                                     
