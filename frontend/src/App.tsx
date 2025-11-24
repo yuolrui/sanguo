@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
-import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon } from 'lucide-react';
+import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Search } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS, STAR_STYLES } from './types';
 
 // --- API Service ---
@@ -21,6 +21,10 @@ const api = {
     },
     getMyGenerals: async (token: string) => {
         const res = await fetch(`${API_URL}/user/generals`, { headers: { 'Authorization': `Bearer ${token}` } });
+        return res.json();
+    },
+    getGallery: async (token: string) => {
+        const res = await fetch(`${API_URL}/gallery`, { headers: { 'Authorization': `Bearer ${token}` } });
         return res.json();
     },
     gacha: async (token: string) => {
@@ -185,6 +189,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
                 <Link to="/" className="flex flex-col items-center gap-1 text-stone-400 hover:text-amber-500"><Landmark size={20} /><span>主城</span></Link>
                 <Link to="/campaign" className="flex flex-col items-center gap-1 text-stone-400 hover:text-amber-500"><Sword size={20} /><span>征战</span></Link>
                 <Link to="/gacha" className="flex flex-col items-center gap-1 text-stone-400 hover:text-amber-500"><Gift size={20} /><span>招募</span></Link>
+                <Link to="/gallery" className="flex flex-col items-center gap-1 text-stone-400 hover:text-amber-500"><BookOpen size={20} /><span>图鉴</span></Link>
                 <Link to="/barracks" className="flex flex-col items-center gap-1 text-stone-400 hover:text-amber-500"><Users size={20} /><span>军营</span></Link>
                 <Link to="/inventory" className="flex flex-col items-center gap-1 text-stone-400 hover:text-amber-500"><ShoppingBag size={20} /><span>仓库</span></Link>
             </nav>
@@ -264,7 +269,7 @@ const Dashboard = () => {
                 </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div onClick={handleSignin} className="bg-stone-800 p-6 rounded-lg border border-stone-700 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-stone-700 transition active:scale-95">
                     <Scroll size={32} className="text-amber-500" />
                     <span className="font-bold">每日签到</span>
@@ -272,6 +277,10 @@ const Dashboard = () => {
                 <Link to="/barracks" className="bg-stone-800 p-6 rounded-lg border border-stone-700 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-stone-700 transition">
                     <Users size={32} className="text-blue-500" />
                     <span className="font-bold">整顿军马</span>
+                </Link>
+                <Link to="/gallery" className="bg-stone-800 p-6 rounded-lg border border-stone-700 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-stone-700 transition">
+                    <BookOpen size={32} className="text-purple-500" />
+                    <span className="font-bold">武将图鉴</span>
                 </Link>
             </div>
         </div>
@@ -353,20 +362,177 @@ const calculatePower = (g: UserGeneral) => {
 };
 
 // --- Bond Logic Definitions ---
-const BONDS = [
-    { name: '桃园结义', desc: '刘备、关羽、张飞同时上阵', boost: '战力+20%', condition: (names: string[]) => ['刘备', '关羽', '张飞'].every(n => names.includes(n)) },
-    { name: '五虎上将', desc: '关羽/张飞/赵云/马超/黄忠 (≥3人)', boost: '战力+15%', condition: (names: string[]) => ['关羽', '张飞', '赵云', '马超', '黄忠'].filter(n => names.includes(n)).length >= 3 },
-    { name: '五子良将', desc: '张辽/张郃/徐晃/于禁/乐进 (≥3人)', boost: '战力+15%', condition: (names: string[]) => ['张辽', '张郃', '徐晃', '于禁', '乐进'].filter(n => names.includes(n)).length >= 3 },
-    { name: '魏国精锐', desc: '魏国武将 ≥ 3人', boost: '战力+10%', condition: (names: string[], countries: string[]) => countries.filter(c => c === '魏').length >= 3 },
-    { name: '蜀汉英杰', desc: '蜀国武将 ≥ 3人', boost: '战力+10%', condition: (names: string[], countries: string[]) => countries.filter(c => c === '蜀').length >= 3 },
-    { name: '江东虎臣', desc: '吴国武将 ≥ 3人', boost: '战力+10%', condition: (names: string[], countries: string[]) => countries.filter(c => c === '吴').length >= 3 },
-    { name: '群雄割据', desc: '群雄武将 ≥ 3人', boost: '战力+10%', condition: (names: string[], countries: string[]) => countries.filter(c => c === '群').length >= 3 },
+// Refactored to allow checking specific generals for Gallery view
+interface BondDef {
+    name: string;
+    desc: string;
+    boost: string;
+    // Condition function for Battle/Team calculations
+    condition: (names: string[], countries: string[]) => boolean;
+    // Metadata for Gallery display (optional)
+    generals?: string[];
+    country?: string;
+}
+
+const BONDS: BondDef[] = [
+    { 
+        name: '桃园结义', 
+        desc: '刘备、关羽、张飞同时上阵', 
+        boost: '战力+20%', 
+        generals: ['刘备', '关羽', '张飞'],
+        condition: (names) => ['刘备', '关羽', '张飞'].every(n => names.includes(n)) 
+    },
+    { 
+        name: '五虎上将', 
+        desc: '关羽/张飞/赵云/马超/黄忠 (≥3人)', 
+        boost: '战力+15%', 
+        generals: ['关羽', '张飞', '赵云', '马超', '黄忠'],
+        condition: (names) => ['关羽', '张飞', '赵云', '马超', '黄忠'].filter(n => names.includes(n)).length >= 3 
+    },
+    { 
+        name: '五子良将', 
+        desc: '张辽/张郃/徐晃/于禁/乐进 (≥3人)', 
+        boost: '战力+15%', 
+        generals: ['张辽', '张郃', '徐晃', '于禁', '乐进'],
+        condition: (names) => ['张辽', '张郃', '徐晃', '于禁', '乐进'].filter(n => names.includes(n)).length >= 3 
+    },
+    { 
+        name: '魏国精锐', 
+        desc: '魏国武将 ≥ 3人', 
+        boost: '战力+10%', 
+        country: '魏',
+        condition: (_, countries) => countries.filter(c => c === '魏').length >= 3 
+    },
+    { 
+        name: '蜀汉英杰', 
+        desc: '蜀国武将 ≥ 3人', 
+        boost: '战力+10%', 
+        country: '蜀',
+        condition: (_, countries) => countries.filter(c => c === '蜀').length >= 3 
+    },
+    { 
+        name: '江东虎臣', 
+        desc: '吴国武将 ≥ 3人', 
+        boost: '战力+10%', 
+        country: '吴',
+        condition: (_, countries) => countries.filter(c => c === '吴').length >= 3 
+    },
+    { 
+        name: '群雄割据', 
+        desc: '群雄武将 ≥ 3人', 
+        boost: '战力+10%', 
+        country: '群',
+        condition: (_, countries) => countries.filter(c => c === '群').length >= 3 
+    },
 ];
 
 const getActiveBonds = (team: UserGeneral[]) => {
     const names = team.map(g => g.name);
     const countries = team.map(g => g.country);
     return BONDS.filter(b => b.condition(names, countries));
+};
+
+const getGeneralBonds = (g: General) => {
+    return BONDS.filter(b => {
+        if (b.generals && b.generals.includes(g.name)) return true;
+        if (b.country && b.country === g.country) return true;
+        return false;
+    });
+};
+
+// --- Gallery View ---
+const Gallery = () => {
+    const { token } = useAuth();
+    const [generals, setGenerals] = useState<General[]>([]);
+    const [filter, setFilter] = useState('全部');
+    
+    useEffect(() => {
+        if(token) api.getGallery(token).then(setGenerals);
+    }, [token]);
+
+    const filtered = filter === '全部' ? generals : generals.filter(g => g.country === filter);
+
+    const getProb = (stars: number) => {
+        if (stars === 5) return '2%';
+        if (stars === 4) return '10%';
+        return '88%';
+    };
+
+    return (
+        <div className="space-y-4">
+            <h2 className="text-xl font-bold border-l-4 border-purple-500 pl-3 flex items-center gap-2">
+                <BookOpen size={24}/> 武将图鉴
+            </h2>
+            
+            {/* Filters */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
+                {['全部', '魏', '蜀', '吴', '群'].map(c => (
+                    <button 
+                        key={c}
+                        onClick={() => setFilter(c)}
+                        className={`px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${filter === c ? 'bg-amber-600 text-white' : 'bg-stone-800 text-stone-400 hover:bg-stone-700'}`}
+                    >
+                        {c}
+                    </button>
+                ))}
+            </div>
+
+            {/* Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filtered.map(g => {
+                    const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
+                    const bonds = getGeneralBonds(g);
+
+                    return (
+                        <div key={g.id} className="bg-stone-800 rounded-lg p-3 border border-stone-700 flex gap-4 shadow-lg">
+                            {/* Avatar */}
+                            <div className="relative w-20 h-28 shrink-0">
+                                <img src={g.avatar} className={`w-full h-full object-cover rounded border-2 ${style.border}`} />
+                                <div className={`absolute -top-1 -left-1 px-1.5 py-0.5 text-[10px] font-bold text-white rounded-full ${COUNTRY_COLORS[g.country]}`}>
+                                    {g.country}
+                                </div>
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex justify-between items-start">
+                                        <div className={`font-bold ${style.text}`}>{g.name}</div>
+                                        <div className="text-xs font-bold bg-stone-900 px-1.5 py-0.5 rounded text-stone-400">
+                                            {g.stars}★
+                                        </div>
+                                    </div>
+                                    <div className="text-[10px] text-stone-500 line-clamp-2 mt-1 italic">{g.description}</div>
+                                </div>
+                                
+                                <div className="grid grid-cols-3 gap-1 text-[10px] font-mono my-2 text-stone-300 bg-stone-900/50 p-1 rounded">
+                                    <div title="武力">武:{g.str}</div>
+                                    <div title="智力">智:{g.int}</div>
+                                    <div title="统率">统:{g.ldr}</div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-1 text-[10px] text-stone-400">
+                                        <Gift size={10} />
+                                        <span>招募概率: <span className="text-amber-500 font-bold">{getProb(g.stars)}</span></span>
+                                    </div>
+                                    
+                                    {/* Bonds Mini View */}
+                                    <div className="flex flex-wrap gap-1">
+                                        {bonds.map(b => (
+                                            <span key={b.name} className="px-1.5 py-0.5 bg-blue-900/30 text-blue-300 text-[9px] rounded border border-blue-900/50">
+                                                {b.name}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
 };
 
 // --- New Barracks View (Koei Style) ---
@@ -680,6 +846,7 @@ export default function App() {
                         <Route path="/login" element={<Login />} />
                         <Route path="/" element={<Layout><Dashboard /></Layout>} />
                         <Route path="/gacha" element={<Layout><Gacha /></Layout>} />
+                        <Route path="/gallery" element={<Layout><Gallery /></Layout>} />
                         <Route path="/barracks" element={<Layout><Barracks /></Layout>} />
                         <Route path="/campaign" element={<Layout><CampaignPage /></Layout>} />
                         <Route path="/inventory" element={<Layout><div className="text-center p-10 text-stone-500">装备在军营中管理</div></Layout>} />
