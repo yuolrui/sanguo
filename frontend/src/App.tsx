@@ -4,7 +4,8 @@ import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift } from 'lucid
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS } from './types';
 
 // --- API Service ---
-const API_URL = 'http://localhost:3000/api';
+// Changed to relative path. Nginx or Vite Proxy will handle the forwarding to port 3000.
+const API_URL = '/api';
 
 const api = {
     login: async (data: any) => {

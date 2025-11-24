@@ -10,6 +10,14 @@ export default defineConfig({
     outDir: 'dist', // 相对于 root，即 frontend/dist
     emptyOutDir: true, // 构建时清空 dist
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      }
+    }
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

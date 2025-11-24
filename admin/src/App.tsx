@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 
-const API = 'http://localhost:3000/api';
-const ADMIN_API = 'http://localhost:3000/admin/v1';
+// Changed to relative paths. Nginx or Vite Proxy will handle the forwarding to port 3000.
+const API = '/api';
+const ADMIN_API = '/admin/v1';
 
 export default function AdminApp() {
     const [token, setToken] = useState(localStorage.getItem('adminToken') || '');

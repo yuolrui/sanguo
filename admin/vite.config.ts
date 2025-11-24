@@ -10,6 +10,18 @@ export default defineConfig({
     outDir: 'dist', // 相对于 root，即 admin/dist
     emptyOutDir: true,
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/admin': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      }
+    }
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
