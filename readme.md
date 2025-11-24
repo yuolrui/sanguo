@@ -1,3 +1,4 @@
+
 # 三国志：霸业 (Three Kingdoms: Warlord Chronicles)
 
 一款基于 Web 的三国策略 RPG 游戏，包含抽卡、战役、装备与签到系统。
@@ -24,7 +25,7 @@ project-root/
 ├── backend/              # Node.js 后端
 │     └── src/
 │
-└── nginx.conf            # 路由配置文件
+└── nginx.conf            # Nginx 完整配置文件
 ```
 
 ---
@@ -32,6 +33,11 @@ project-root/
 ## 🔧 Nginx 关键配置示例 (核心)
 
 这是部署成功的关键。请将以下配置复制到您的 Nginx 配置文件中，并**务必修改 `/absolute/path/to/...` 为您服务器上的实际绝对路径**。
+
+### 配置逻辑
+1.  **静态资源托管**：分别指向 `frontend/dist` 和 `admin/dist`。
+2.  **SPA 路由支持**：使用 `try_files $uri $uri/ /index.html;` 防止刷新页面 404。
+3.  **API 反向代理**：前端通过相对路径 `/api` 访问，Nginx 负责转发给后端 `3000` 端口。
 
 ```nginx
 worker_processes  1;
@@ -54,21 +60,19 @@ http {
         server_name  localhost;
 
         # 【关键修改点】指向 frontend 下的 dist 目录
-        # 例如: C:/Projects/sanguo/frontend/dist 或 /var/www/sanguo/frontend/dist
         root   /absolute/path/to/your/project/frontend/dist;
         
         index  index.html index.htm;
 
-        # 支持 React Router 的 History 模式 (刷新页面不报 404)
+        # 支持 React Router
         location / {
             try_files $uri $uri/ /index.html;
         }
 
-        # 代理后端 API 请求 (转发到 Node.js 3000 端口)
+        # 【核心配置】代理后端 API 请求 (转发到 Node.js 3000 端口)
         location /api/ {
             proxy_pass http://localhost:3000/api/;
             proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
         }
     }
 
@@ -84,12 +88,18 @@ http {
         
         index  index.html index.htm;
 
-        # 支持 React Router 的 History 模式
+        # 支持 React Router
         location / {
             try_files $uri $uri/ /index.html;
         }
 
-        # 代理后台 API 请求
+        # 【核心配置】管理员也需要登录，转发 /api
+        location /api/ {
+            proxy_pass http://localhost:3000/api/;
+            proxy_set_header Host $host;
+        }
+
+        # 【核心配置】管理后台专用接口转发
         location /admin/ {
             proxy_pass http://localhost:3000/admin/;
             proxy_set_header Host $host;
@@ -117,7 +127,7 @@ cd frontend
 # 1. 安装依赖
 npm install
 
-# 2. 构建
+# 2. 构建 (已修复 TS 报错)
 npm run build
 ```
 
@@ -133,7 +143,7 @@ cd ../admin  # 如果在 frontend 目录下
 # 1. 安装依赖
 npm install
 
-# 2. 构建
+# 2. 构建 (已修复 TS 报错)
 npm run build
 ```
 
