@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Users, Database, LogOut, Search, Plus, Trash, Save, Coins, Scroll, Shield, Sword, Box, Menu, X } from 'lucide-react';
+import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { Users, Database, LogOut, Search, Plus, Trash, Save, Coins, Scroll, Shield, Sword, Box, Menu, X, CheckCircle, XCircle, Info } from 'lucide-react';
 
 const API = '/api';
 const ADMIN_API = '/admin/v1';
@@ -23,10 +23,59 @@ interface UserDetail {
     equipments: any[];
 }
 
+// --- Toast System ---
+interface ToastMsg {
+    id: number;
+    text: string;
+    type: 'success' | 'error' | 'info';
+}
+
+const ToastContext = createContext<{ show: (text: string, type?: 'success'|'error'|'info') => void }>(null as any);
+
+const ToastProvider = ({ children }: { children: ReactNode }) => {
+    const [toasts, setToasts] = useState<ToastMsg[]>([]);
+
+    const show = (text: string, type: 'success'|'error'|'info' = 'info') => {
+        const id = Date.now();
+        setToasts(prev => [...prev, { id, text, type }]);
+        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+    };
+
+    return (
+        <ToastContext.Provider value={{ show }}>
+            {children}
+            <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+                {toasts.map(t => (
+                    <div key={t.id} className={`
+                        pointer-events-auto flex items-center gap-2 px-4 py-3 rounded shadow-lg text-white min-w-[250px] transform transition-all duration-300
+                        ${t.type === 'success' ? 'bg-green-600' : t.type === 'error' ? 'bg-red-600' : 'bg-blue-600'}
+                    `}>
+                        {t.type === 'success' && <CheckCircle size={18} />}
+                        {t.type === 'error' && <XCircle size={18} />}
+                        {t.type === 'info' && <Info size={18} />}
+                        <span className="text-sm font-bold">{t.text}</span>
+                    </div>
+                ))}
+            </div>
+        </ToastContext.Provider>
+    );
+};
+
+const useToast = () => useContext(ToastContext);
+
 export default function AdminApp() {
+    return (
+        <ToastProvider>
+            <AdminMain />
+        </ToastProvider>
+    );
+}
+
+function AdminMain() {
     const [token, setToken] = useState(localStorage.getItem('adminToken') || '');
     const [view, setView] = useState<'login' | 'users' | 'system'>('login');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const toast = useToast();
     
     // Login
     const [username, setUsername] = useState('admin');
@@ -94,8 +143,9 @@ export default function AdminApp() {
             setToken(data.token);
             localStorage.setItem('adminToken', data.token);
             setView('users');
+            toast.show('登录成功', 'success');
         } else {
-            alert('Invalid credentials');
+            toast.show('账号或密码错误', 'error');
         }
     };
 
@@ -104,6 +154,7 @@ export default function AdminApp() {
         localStorage.removeItem('adminToken');
         setView('login');
         setSelectedUserId(null);
+        toast.show('已退出登录', 'info');
     };
 
     const updateCurrency = async () => {
@@ -113,7 +164,7 @@ export default function AdminApp() {
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(currencyForm)
         });
-        alert('Saved');
+        toast.show('资产已保存', 'success');
         fetchUserDetail(selectedUserId);
     };
 
@@ -124,6 +175,7 @@ export default function AdminApp() {
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ generalId, action, uid })
         });
+        toast.show(action === 'add' ? '武将已添加' : '武将已移除', 'success');
         fetchUserDetail(selectedUserId);
     };
 
@@ -134,6 +186,7 @@ export default function AdminApp() {
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ equipmentId, action, uid })
         });
+        toast.show(action === 'add' ? '装备已添加' : '装备已移除', 'success');
         fetchUserDetail(selectedUserId);
     };
 

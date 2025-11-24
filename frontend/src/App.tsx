@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
-import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield } from 'lucide-react';
+import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS } from './types';
 
 // --- API Service ---
@@ -60,6 +60,46 @@ const api = {
         return res.json();
     }
 };
+
+// --- Toast System ---
+interface ToastMsg {
+    id: number;
+    text: string;
+    type: 'success' | 'error' | 'info';
+}
+
+const ToastContext = createContext<{ show: (text: string, type?: 'success'|'error'|'info') => void }>(null as any);
+
+const ToastProvider = ({ children }: { children: ReactNode }) => {
+    const [toasts, setToasts] = useState<ToastMsg[]>([]);
+
+    const show = (text: string, type: 'success'|'error'|'info' = 'info') => {
+        const id = Date.now();
+        setToasts(prev => [...prev, { id, text, type }]);
+        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+    };
+
+    return (
+        <ToastContext.Provider value={{ show }}>
+            {children}
+            <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+                {toasts.map(t => (
+                    <div key={t.id} className={`
+                        pointer-events-auto flex items-center gap-2 px-4 py-3 rounded shadow-lg text-white min-w-[250px] transform transition-all duration-300 ease-in-out
+                        ${t.type === 'success' ? 'bg-green-600' : t.type === 'error' ? 'bg-red-600' : 'bg-blue-600'}
+                    `}>
+                        {t.type === 'success' && <CheckCircle size={18} />}
+                        {t.type === 'error' && <XCircle size={18} />}
+                        {t.type === 'info' && <Info size={18} />}
+                        <span className="text-sm font-bold">{t.text}</span>
+                    </div>
+                ))}
+            </div>
+        </ToastContext.Provider>
+    );
+};
+
+const useToast = () => useContext(ToastContext);
 
 // --- Context ---
 const AuthContext = createContext<any>(null);
@@ -141,21 +181,24 @@ const Login = () => {
     const [form, setForm] = useState({ username: '', password: '' });
     const { login } = useAuth();
     const navigate = useNavigate();
+    const toast = useToast();
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         try {
             if (isReg) {
                 await api.register(form);
-                alert('注册成功，请登录');
+                toast.show('注册成功，请登录', 'success');
                 setIsReg(false);
             } else {
                 const res = await api.login(form);
-                if (res.error) return alert(res.error);
+                if (res.error) return toast.show(res.error, 'error');
                 login(res.token);
                 navigate('/');
             }
-        } catch (err) { alert('Failed'); }
+        } catch (err) { 
+            toast.show('请求失败，请检查网络', 'error'); 
+        }
     };
 
     return (
@@ -177,17 +220,19 @@ const Login = () => {
 
 const Dashboard = () => {
     const { refreshUser } = useAuth();
+    const toast = useToast();
+
     const handleSignin = async () => {
         const token = localStorage.getItem('token');
         if(!token) return;
         try {
             const res = await api.signin(token);
-            if(res.error) alert(res.error);
+            if(res.error) toast.show(res.error, 'info');
             else {
-                alert(`签到成功! 获得 金币${res.rewards.gold}, 招募令${res.rewards.tokens}`);
+                toast.show(`签到成功! 金币+${res.rewards.gold}, 招募令+${res.rewards.tokens}`, 'success');
                 refreshUser();
             }
-        } catch(e) { alert('Error'); }
+        } catch(e) { toast.show('签到请求失败', 'error'); }
     };
 
     return (
@@ -219,11 +264,12 @@ const Dashboard = () => {
 const Gacha = () => {
     const { token, refreshUser, user } = useAuth();
     const [result, setResult] = useState<General[] | null>(null);
+    const toast = useToast();
 
     const handleGacha = async () => {
         if (!token) return;
         const res = await api.gacha(token);
-        if (res.error) return alert(res.error);
+        if (res.error) return toast.show(res.error, 'error');
         setResult([res.general]);
         refreshUser();
     };
@@ -231,7 +277,7 @@ const Gacha = () => {
     const handleGachaTen = async () => {
         if (!token) return;
         const res = await api.gachaTen(token);
-        if (res.error) return alert(res.error);
+        if (res.error) return toast.show(res.error, 'error');
         setResult(res.generals);
         refreshUser();
     }
@@ -276,6 +322,7 @@ const Gacha = () => {
 const Barracks = () => {
     const { token } = useAuth();
     const [generals, setGenerals] = useState<UserGeneral[]>([]);
+    const toast = useToast();
 
     const load = () => {
         if (token) api.getMyGenerals(token).then(setGenerals);
@@ -294,18 +341,21 @@ const Barracks = () => {
     const autoTeam = async () => {
         if(!token) return;
         await api.autoTeam(token);
+        toast.show('部队已自动编制', 'success');
         load();
     };
 
     const handleEquip = async (uid: number) => {
         if(!token) return;
         await api.autoEquip(token, uid);
+        toast.show('已自动穿戴最佳装备', 'success');
         load();
     };
 
     const handleUnequip = async (uid: number) => {
         if(!token) return;
         await api.unequipAll(token, uid);
+        toast.show('已卸下所有装备', 'info');
         load();
     };
 
@@ -434,6 +484,7 @@ const Barracks = () => {
 const CampaignPage = () => {
     const { token, refreshUser } = useAuth();
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+    const toast = useToast();
 
     useEffect(() => {
         if(token) api.getCampaigns(token).then(setCampaigns);
@@ -442,14 +493,14 @@ const CampaignPage = () => {
     const fight = async (id: number) => {
         if(!token) return;
         const res = await api.battle(token, id);
-        if(res.error) return alert(res.error);
+        if(res.error) return toast.show(res.error, 'error');
         if(res.win) {
-            alert(`胜利! 获得金币 ${res.rewards.gold} ${Math.random() < 0.2 ? '(掉落了装备!)' : ''}`);
+            toast.show(`战役胜利! 获得金币 ${res.rewards.gold}`, 'success');
             const updated = await api.getCampaigns(token);
             setCampaigns(updated);
             refreshUser();
         } else {
-            alert('战斗失败，请提升战力');
+            toast.show('战斗失败，请提升武将战力', 'info');
         }
     };
 
@@ -482,16 +533,18 @@ const CampaignPage = () => {
 export default function App() {
     return (
         <HashRouter>
-            <AuthProvider>
-                <Routes>
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/" element={<Layout><Dashboard /></Layout>} />
-                    <Route path="/gacha" element={<Layout><Gacha /></Layout>} />
-                    <Route path="/barracks" element={<Layout><Barracks /></Layout>} />
-                    <Route path="/campaign" element={<Layout><CampaignPage /></Layout>} />
-                    <Route path="/inventory" element={<Layout><div className="text-center p-10 text-stone-500">装备在军营中管理</div></Layout>} />
-                </Routes>
-            </AuthProvider>
+            <ToastProvider>
+                <AuthProvider>
+                    <Routes>
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/" element={<Layout><Dashboard /></Layout>} />
+                        <Route path="/gacha" element={<Layout><Gacha /></Layout>} />
+                        <Route path="/barracks" element={<Layout><Barracks /></Layout>} />
+                        <Route path="/campaign" element={<Layout><CampaignPage /></Layout>} />
+                        <Route path="/inventory" element={<Layout><div className="text-center p-10 text-stone-500">装备在军营中管理</div></Layout>} />
+                    </Routes>
+                </AuthProvider>
+            </ToastProvider>
         </HashRouter>
     );
 }
