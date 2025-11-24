@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
 import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS } from './types';
@@ -49,7 +49,7 @@ const api = {
 // --- Context ---
 const AuthContext = createContext<any>(null);
 
-const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [token, setToken] = useState(localStorage.getItem('token'));
     const [user, setUser] = useState<User | null>(null);
 
@@ -84,7 +84,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 const useAuth = () => useContext(AuthContext);
 
 // --- Components ---
-const Layout = ({ children }: { children: React.ReactNode }) => {
+const Layout = ({ children }: { children: ReactNode }) => {
     const { user, logout } = useAuth();
     if (!user) return <Navigate to="/login" />;
 
@@ -120,7 +120,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     );
 };
 
-const GeneralCard = ({ general, action }: { general: UserGeneral, action?: React.ReactNode }) => (
+const GeneralCard = ({ general, action }: { general: UserGeneral, action?: ReactNode }) => (
     <div className="relative bg-stone-800 rounded-lg overflow-hidden border border-stone-700 shadow-lg group hover:border-amber-600 transition-all">
         <div className="relative h-48 w-full bg-stone-900">
             <img src={general.avatar} alt={general.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
@@ -152,7 +152,7 @@ const Login = () => {
     const { login } = useAuth();
     const navigate = useNavigate();
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         try {
             if (isReg) {
