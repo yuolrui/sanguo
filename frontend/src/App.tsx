@@ -119,10 +119,34 @@ const ToastProvider = ({ children }: { children: ReactNode }) => {
                 }
                 @keyframes pulse-glow {
                     0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); }
-                    50% { box-shadow: 0 0 25px rgba(245, 158, 11, 0.6); }
+                    50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.8); }
                 }
                 .animate-pulse-glow {
-                    animation: pulse-glow 2s infinite;
+                    animation: pulse-glow 1s infinite;
+                }
+                @keyframes shake-hard {
+                    0% { transform: translate(1px, 1px) rotate(0deg); }
+                    10% { transform: translate(-1px, -2px) rotate(-1deg); }
+                    20% { transform: translate(-3px, 0px) rotate(1deg); }
+                    30% { transform: translate(3px, 2px) rotate(0deg); }
+                    40% { transform: translate(1px, -1px) rotate(1deg); }
+                    50% { transform: translate(-1px, 2px) rotate(-1deg); }
+                    60% { transform: translate(-3px, 1px) rotate(0deg); }
+                    70% { transform: translate(3px, 1px) rotate(-1deg); }
+                    80% { transform: translate(-1px, -1px) rotate(1deg); }
+                    90% { transform: translate(1px, 2px) rotate(0deg); }
+                    100% { transform: translate(1px, -2px) rotate(-1deg); }
+                }
+                .animate-shake-hard {
+                    animation: shake-hard 0.5s ease-in-out infinite;
+                }
+                @keyframes flash-white {
+                    0% { opacity: 0; }
+                    50% { opacity: 1; }
+                    100% { opacity: 0; }
+                }
+                .animate-flash {
+                    animation: flash-white 0.5s ease-out forwards;
                 }
             `}</style>
             <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
@@ -316,43 +340,50 @@ const Dashboard = () => {
 const Gacha = () => {
     const { token, refreshUser, user } = useAuth();
     const [result, setResult] = useState<General[] | null>(null);
-    const [isSummoning, setIsSummoning] = useState(false);
+    // Phase: idle -> charging -> flash -> reveal
+    const [phase, setPhase] = useState<'idle' | 'charging' | 'flash' | 'reveal'>('idle');
     const toast = useToast();
 
     const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-    const handleGacha = async () => {
-        if (!token || isSummoning) return;
-        setIsSummoning(true);
+    const performGacha = async (isTen: boolean) => {
+        if (!token || phase !== 'idle') return;
+        
+        // 1. Charging Phase
+        setPhase('charging');
         setResult(null);
-        await wait(1800);
+
+        // Fetch in background while animating
+        const gachaPromise = isTen ? api.gachaTen(token) : api.gacha(token);
         
-        const res = await api.gacha(token);
-        setIsSummoning(false);
+        // Wait for charge animation (2s)
+        await wait(2000);
         
-        if (res.error) return toast.show(res.error, 'error');
-        setResult([res.general]);
+        // 2. Flash Phase
+        setPhase('flash');
+        await wait(250); // Short bright flash
+        
+        // 3. Resolve & Reveal
+        const res = await gachaPromise;
+        if (res.error) {
+            setPhase('idle');
+            return toast.show(res.error, 'error');
+        }
+        
+        setResult(isTen ? res.generals : [res.general]);
+        setPhase('reveal');
         refreshUser();
     };
-
-    const handleGachaTen = async () => {
-        if (!token || isSummoning) return;
-        setIsSummoning(true);
-        setResult(null);
-        await wait(1800);
-        
-        const res = await api.gachaTen(token);
-        setIsSummoning(false);
-        
-        if (res.error) return toast.show(res.error, 'error');
-        setResult(res.generals);
-        refreshUser();
-    }
 
     const hasLegendary = result?.some(g => g.stars === 5);
 
     return (
-        <div className="flex flex-col items-center space-y-4 md:space-y-6 py-2 md:py-4">
+        <div className="flex flex-col items-center space-y-4 md:space-y-6 py-2 md:py-4 relative">
+            {/* Screen Flash Overlay */}
+            {phase === 'flash' && (
+                <div className="fixed inset-0 z-[100] bg-white animate-flash pointer-events-none"></div>
+            )}
+
             <h2 className="text-xl md:text-2xl font-bold text-amber-500 flex items-center gap-2">
                 <Sparkles size={24}/> 聚贤庄招募
             </h2>
@@ -360,7 +391,7 @@ const Gacha = () => {
                 保底进度: <span className="text-amber-500 font-bold">{user?.pity_counter}</span>/60
             </div>
             
-            {result ? (
+            {phase === 'reveal' && result ? (
                 <div className={`w-full animate-fade-in-up text-center space-y-4 md:space-y-6 bg-stone-800 p-4 md:p-8 rounded-xl border-2 shadow-2xl relative overflow-hidden ${hasLegendary ? 'border-amber-400/80 shadow-amber-900/50' : 'border-stone-600'}`}>
                     {hasLegendary && (
                         <div className="absolute inset-0 bg-amber-500/10 animate-pulse pointer-events-none"></div>
@@ -374,7 +405,7 @@ const Gacha = () => {
                                  const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
                                  const isFiveStar = g.stars === 5;
                                  return (
-                                    <div key={i} style={{ animationDelay: `${i * 50}ms` }} className={`animate-card-appear flex flex-col items-center p-0.5 md:p-2 bg-stone-900 rounded border ${style.border} relative overflow-hidden group transform transition-all duration-300 ${isFiveStar ? 'shadow-[0_0_10px_rgba(251,191,36,0.5)]' : ''}`}>
+                                    <div key={i} style={{ animationDelay: `${i * 100}ms` }} className={`animate-card-appear flex flex-col items-center p-0.5 md:p-2 bg-stone-900 rounded border ${style.border} relative overflow-hidden group transform transition-all duration-300 ${isFiveStar ? 'shadow-[0_0_15px_rgba(251,191,36,0.6)] z-10 scale-105' : ''}`}>
                                         <div className={`absolute inset-0 opacity-10 ${style.bg}`}></div>
                                         {isFiveStar && <div className="absolute inset-0 bg-gradient-to-t from-amber-500/30 to-transparent animate-pulse"></div>}
                                         <div className="relative w-full aspect-[2/3] overflow-hidden rounded-[2px] border border-stone-800">
@@ -390,19 +421,20 @@ const Gacha = () => {
                                  );
                             })}
                         </div>
-                        <button onClick={() => setResult(null)} className="mt-6 md:mt-8 px-8 py-3 bg-stone-700 rounded-full hover:bg-stone-600 text-white font-bold w-full md:w-auto border border-stone-500 active:scale-95 transition text-sm md:text-base">
+                        <button onClick={() => { setPhase('idle'); setResult(null); }} className="mt-6 md:mt-8 px-8 py-3 bg-stone-700 rounded-full hover:bg-stone-600 text-white font-bold w-full md:w-auto border border-stone-500 active:scale-95 transition text-sm md:text-base">
                             继续招募
                         </button>
                     </div>
                 </div>
             ) : (
-                <div className="w-[300px] h-[300px] md:w-[350px] md:h-[350px] bg-stone-900/50 rounded-full border-4 border-stone-700 relative flex flex-col items-center justify-center p-8 shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] overflow-hidden shrink-0">
+                <div className="w-[300px] h-[300px] md:w-[350px] md:h-[350px] bg-stone-900/50 rounded-full border-4 border-stone-700 relative flex flex-col items-center justify-center p-8 shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] overflow-hidden shrink-0 transition-all duration-300">
+                    
                     {/* Altar Effects */}
-                    <div className={`absolute inset-0 rounded-full border-[2px] border-stone-700/50 ${isSummoning ? 'animate-spin-slow' : ''}`}></div>
-                    <div className={`absolute inset-2 rounded-full border-[1px] border-stone-800 ${isSummoning ? 'animate-spin duration-[3s] direction-reverse' : ''}`}></div>
+                    <div className={`absolute inset-0 rounded-full border-[2px] border-stone-700/50 ${phase === 'charging' ? 'animate-spin-slow' : ''}`}></div>
+                    <div className={`absolute inset-2 rounded-full border-[1px] border-stone-800 ${phase === 'charging' ? 'animate-spin duration-[2s] direction-reverse' : ''}`}></div>
                     
                     {/* Glowing Runes */}
-                    <div className={`absolute inset-0 flex items-center justify-center ${isSummoning ? 'animate-pulse' : 'opacity-20'}`}>
+                    <div className={`absolute inset-0 flex items-center justify-center ${phase === 'charging' ? 'animate-spin duration-[3s]' : 'opacity-30'}`}>
                          <div className="absolute top-4 w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_10px_orange]"></div>
                          <div className="absolute bottom-4 w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_10px_orange]"></div>
                          <div className="absolute left-4 w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_10px_orange]"></div>
@@ -410,8 +442,10 @@ const Gacha = () => {
                     </div>
                     
                     {/* Inner Circle / Portal */}
-                    <div className={`relative z-10 w-32 h-32 md:w-40 md:h-40 rounded-full border-2 border-stone-600 flex items-center justify-center transition-all duration-500 ${isSummoning ? 'bg-amber-900/40 animate-pulse-glow border-amber-500' : 'bg-stone-800'}`}>
-                         {isSummoning ? (
+                    <div className={`relative z-10 w-32 h-32 md:w-40 md:h-40 rounded-full border-2 border-stone-600 flex items-center justify-center transition-all duration-500 
+                        ${phase === 'charging' ? 'bg-amber-900/40 animate-shake-hard border-amber-500 shadow-[0_0_40px_rgba(245,158,11,0.6)]' : 'bg-stone-800'}
+                    `}>
+                         {phase === 'charging' ? (
                              <div className="text-amber-500">
                                 <Sparkles size={64} className="animate-spin" />
                              </div>
@@ -423,15 +457,15 @@ const Gacha = () => {
                     </div>
 
                     {/* Controls */}
-                    {!isSummoning && (
+                    {phase === 'idle' && (
                         <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-3 z-20 px-4">
-                            <button onClick={handleGacha} className="flex-1 max-w-[120px] bg-gradient-to-b from-red-700 to-red-900 hover:from-red-600 hover:to-red-800 text-white font-bold py-2 rounded-lg shadow-lg transform active:scale-95 transition-all border border-red-500/50">
+                            <button onClick={() => performGacha(false)} className="flex-1 max-w-[120px] bg-gradient-to-b from-red-700 to-red-900 hover:from-red-600 hover:to-red-800 text-white font-bold py-2 rounded-lg shadow-lg transform active:scale-95 transition-all border border-red-500/50">
                                 <span className="flex flex-col items-center justify-center text-xs">
                                     <span className="flex items-center gap-1 text-sm"><Gift size={14}/> 单抽</span>
                                     <span className="opacity-70 scale-90">1令</span>
                                 </span>
                             </button>
-                            <button onClick={handleGachaTen} className="flex-1 max-w-[120px] bg-gradient-to-b from-amber-600 to-amber-800 hover:from-amber-500 hover:to-amber-700 text-white font-bold py-2 rounded-lg shadow-lg transform active:scale-95 transition-all border border-amber-500/50">
+                            <button onClick={() => performGacha(true)} className="flex-1 max-w-[120px] bg-gradient-to-b from-amber-600 to-amber-800 hover:from-amber-500 hover:to-amber-700 text-white font-bold py-2 rounded-lg shadow-lg transform active:scale-95 transition-all border border-amber-500/50">
                                 <span className="flex flex-col items-center justify-center text-xs">
                                     <span className="flex items-center gap-1 text-sm"><Sparkles size={14}/> 十连</span>
                                     <span className="opacity-70 scale-90">10令</span>
@@ -440,8 +474,8 @@ const Gacha = () => {
                         </div>
                     )}
                     
-                    {isSummoning && (
-                        <div className="absolute bottom-10 z-20 text-amber-500 font-bold tracking-[0.5em] text-sm animate-pulse">
+                    {phase === 'charging' && (
+                        <div className="absolute bottom-10 z-20 text-amber-500 font-bold tracking-[0.5em] text-sm animate-pulse drop-shadow-md">
                             召唤中...
                         </div>
                     )}
