@@ -21,7 +21,8 @@
     "sqlite": "^5.1.1",
     "@vitejs/plugin-react": "^5.1.1",
     "vite": "^7.2.4",
-    "path": "^0.12.7"
+    "path": "^0.12.7",
+    "bcryptjs": "^3.0.3"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

@@ -1,14 +1,16 @@
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 let db;
 
 export async function initDB() {
+  console.log('Initializing Database...');
   db = await open({
     filename: './sanguo.db',
     driver: sqlite3.Database
   });
+  console.log('Database connected.');
 
   await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -100,14 +102,20 @@ export async function initDB() {
     }
   }
 
-  // Create Admin User if not exists
-  const admin = await db.get('SELECT * FROM users WHERE username = ?', ['admin']);
-  if (!admin) {
-    console.log('Creating default admin user...');
-    const hashedPassword = await bcrypt.hash('123456', 10);
-    // Give admin lots of gold/tokens for testing
-    await db.run('INSERT INTO users (username, password, gold, tokens) VALUES (?, ?, ?, ?)', ['admin', hashedPassword, 999999, 9999]);
+  // Force Ensure Admin User Exists with Known Password
+  console.log('Creating/Resetting admin user (admin/123456)...');
+  const hashedPassword = await bcrypt.hash('123456', 10);
+  
+  const existingAdmin = await db.get('SELECT * FROM users WHERE username = ?', ['admin']);
+  
+  if (existingAdmin) {
+      // Reset password if exists
+      await db.run('UPDATE users SET password = ?, gold = 999999, tokens = 9999 WHERE username = ?', [hashedPassword, 'admin']);
+  } else {
+      // Create if not exists
+      await db.run('INSERT INTO users (username, password, gold, tokens) VALUES (?, ?, ?, ?)', ['admin', hashedPassword, 999999, 9999]);
   }
+  console.log('Admin user ensured.');
 }
 
 export function getDB() {
