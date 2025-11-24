@@ -165,21 +165,32 @@ app.post('/api/team/auto', authenticateToken, async (req, res) => {
     // Reset current team
     await db.run('UPDATE user_generals SET is_in_team = 0 WHERE user_id = ?', [userId]);
 
-    // Get top 5 generals by base stats (+ evolution bonus estimation)
+    // Get all generals sorted by approximate power desc
     const allGenerals = await db.all(`
-        SELECT ug.id, (g.str + g.int + g.ldr) * (1 + (IFNULL(ug.evolution, 0) * 0.1)) as power 
+        SELECT ug.id, ug.general_id, (g.str + g.int + g.ldr) * ug.level * (1 + (IFNULL(ug.evolution, 0) * 0.1)) as power 
         FROM user_generals ug
         JOIN generals g ON ug.general_id = g.id
         WHERE ug.user_id = ?
         ORDER BY power DESC
-        LIMIT 5
     `, [userId]);
 
+    // Select top 5 unique generals
+    const team = [];
+    const usedGeneralIds = new Set();
+
     for (const g of allGenerals) {
-        await db.run('UPDATE user_generals SET is_in_team = 1 WHERE id = ?', [g.id]);
+        if (team.length >= 5) break;
+        if (!usedGeneralIds.has(g.general_id)) {
+            team.push(g.id);
+            usedGeneralIds.add(g.general_id);
+        }
     }
 
-    res.json({ success: true, count: allGenerals.length });
+    for (const uid of team) {
+        await db.run('UPDATE user_generals SET is_in_team = 1 WHERE id = ?', [uid]);
+    }
+
+    res.json({ success: true, count: team.length });
 });
 
 // Auto Equip (One-click Equip)
@@ -316,7 +327,25 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
 app.post('/api/team', authenticateToken, async (req, res) => {
   const { generalUid, action } = req.body; // action: 'add' | 'remove'
   const db = getDB();
-  await db.run('UPDATE user_generals SET is_in_team = ? WHERE id = ? AND user_id = ?', [action === 'add' ? 1 : 0, generalUid, req.user.id]);
+  const userId = req.user.id;
+
+  if (action === 'add') {
+      const currentTeam = await db.all(`
+        SELECT ug.id, ug.general_id 
+        FROM user_generals ug 
+        WHERE ug.user_id = ? AND ug.is_in_team = 1`, [userId]);
+      
+      if (currentTeam.length >= 5) return res.status(400).json({ error: 'Team is full (Max 5)' });
+
+      const target = await db.get('SELECT general_id FROM user_generals WHERE id = ? AND user_id = ?', [generalUid, userId]);
+      if (!target) return res.status(404).json({ error: 'General not found' });
+
+      // Check for duplicate general type in team
+      const hasDuplicate = currentTeam.some(g => g.general_id === target.general_id);
+      if (hasDuplicate) return res.status(400).json({ error: 'Cannot have duplicate generals in team' });
+  }
+  
+  await db.run('UPDATE user_generals SET is_in_team = ? WHERE id = ? AND user_id = ?', [action === 'add' ? 1 : 0, generalUid, userId]);
   res.json({ success: true });
 });
 

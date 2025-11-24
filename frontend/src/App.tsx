@@ -351,14 +351,29 @@ const Barracks = () => {
 
     const toggle = async (uid: number, isIn: boolean) => {
         if(!token) return;
-        await api.toggleTeam(token, uid, isIn ? 'remove' : 'add');
-        load();
+        
+        // Client-side pre-check for better UX
+        if (!isIn) {
+            const currentTeam = generals.filter(g => g.is_in_team);
+            if (currentTeam.length >= 5) return toast.show('部队已满 (5人)', 'error');
+            
+            const target = generals.find(g => g.uid === uid);
+            // Check if ANY general in the team has the same 'id' (General template ID) as the target
+            if (target && currentTeam.some(g => g.id === target.id)) return toast.show('同名武将不可重复上阵', 'error');
+        }
+
+        const res = await api.toggleTeam(token, uid, isIn ? 'remove' : 'add');
+        if (res.error) {
+            toast.show(res.error, 'error');
+        } else {
+            load();
+        }
     };
 
     const autoTeam = async () => {
         if(!token) return;
         await api.autoTeam(token);
-        toast.show('部队已自动编制', 'success');
+        toast.show('部队已自动编制 (已过滤重复武将)', 'success');
         load();
     };
 
