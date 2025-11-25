@@ -16,7 +16,7 @@ const getAvatarUrl = (name, stars, country, keywords) => {
     // Path: backend/src/../../public/images -> root/public/images
     try {
         const imageDir = path.resolve(__dirname, '../../public/images');
-        const extensions = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
+        const extensions = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'jfif'];
         
         if (fs.existsSync(imageDir)) {
             for (const ext of extensions) {

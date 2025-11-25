@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
+import React, { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star, Box, Compass, Trophy, Skull, X } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS, STAR_STYLES, Equipment } from './types';
@@ -86,7 +86,7 @@ interface ToastMsg {
 
 const ToastContext = createContext<{ show: (text: string, type?: 'success'|'error'|'info') => void }>(null as any);
 
-const ToastProvider = ({ children }: { children: ReactNode }) => {
+const ToastProvider = ({ children }: { children?: ReactNode }) => {
     const [toasts, setToasts] = useState<ToastMsg[]>([]);
 
     const show = (text: string, type: 'success'|'error'|'info' = 'info') => {
@@ -149,7 +149,7 @@ const useToast = () => useContext(ToastContext);
 // --- Context ---
 const AuthContext = createContext<any>(null);
 
-const AuthProvider = ({ children }: { children: ReactNode }) => {
+const AuthProvider = ({ children }: { children?: ReactNode }) => {
     const [token, setToken] = useState(localStorage.getItem('token'));
     const [user, setUser] = useState<User | null>(null);
 
@@ -184,7 +184,7 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
 const useAuth = () => useContext(AuthContext);
 
 // --- Layout Components ---
-const Layout = ({ children }: { children: ReactNode }) => {
+const Layout = ({ children }: { children?: ReactNode }) => {
     const { user, logout } = useAuth();
     const location = useLocation();
     if (!user) return <Navigate to="/login" />;
@@ -261,7 +261,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
 };
 
 // --- Reusable UI Components ---
-const Panel = ({ children, className = '', title }: { children: ReactNode, className?: string, title?: ReactNode }) => (
+const Panel = ({ children, className = '', title }: { children?: ReactNode, className?: string, title?: ReactNode, key?: any }) => (
     <div className={`bg-[#2c2824]/95 border-2 border-[#3E2723] rounded-sm shadow-2xl relative overflow-hidden ${className}`}>
         <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-gold-700 z-10"></div>
         <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-gold-700 z-10"></div>
@@ -280,7 +280,7 @@ const Panel = ({ children, className = '', title }: { children: ReactNode, class
     </div>
 );
 
-const Button = ({ children, onClick, variant = 'primary', disabled = false, className = '' }: { children: ReactNode, onClick?: () => void, variant?: 'primary'|'secondary'|'danger'|'disabled', disabled?: boolean, className?: string }) => {
+const Button = ({ children, onClick, variant = 'primary', disabled = false, className = '' }: { children?: ReactNode, onClick?: () => void, variant?: 'primary'|'secondary'|'danger'|'disabled', disabled?: boolean, className?: string }) => {
     const baseStyles = "relative px-4 py-2 rounded-sm font-bold font-serif border-2 shadow-md active:scale-95 transition-all duration-100 flex items-center justify-center gap-2 uppercase tracking-widest text-sm";
     const variants = {
         primary: "bg-gradient-to-b from-red-900 to-[#2c0b0e] border-[#5D4037] text-gold-100 hover:brightness-110 shadow-red-900/20",

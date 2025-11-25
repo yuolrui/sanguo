@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { Users, Database, LogOut, Search, Plus, Trash, Save, Coins, Scroll, Shield, Sword, Box, Menu, X, CheckCircle, XCircle, Info } from 'lucide-react';
 
 const API = '/api';
@@ -32,7 +32,7 @@ interface ToastMsg {
 
 const ToastContext = createContext<{ show: (text: string, type?: 'success'|'error'|'info') => void }>(null as any);
 
-const ToastProvider = ({ children }: { children: ReactNode }) => {
+const ToastProvider = ({ children }: { children?: ReactNode }) => {
     const [toasts, setToasts] = useState<ToastMsg[]>([]);
 
     const show = (text: string, type: 'success'|'error'|'info' = 'info') => {
