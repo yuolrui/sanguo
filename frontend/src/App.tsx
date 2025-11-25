@@ -31,6 +31,10 @@ const api = {
         const res = await fetch(`${API_URL}/user/collection`, { headers: { 'Authorization': `Bearer ${token}` } });
         return res.json();
     },
+    getUserItems: async (token: string) => {
+        const res = await fetch(`${API_URL}/user/items`, { headers: { 'Authorization': `Bearer ${token}` } });
+        return res.json();
+    },
     gacha: async (token: string) => {
         const res = await fetch(`${API_URL}/gacha`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
         return res.json();
@@ -621,11 +625,95 @@ const getGeneralBonds = (g: General) => {
     });
 };
 
+// --- Inventory View ---
+const Inventory = () => {
+    const { token } = useAuth();
+    const [items, setItems] = useState<any[]>([]);
+    const [filter, setFilter] = useState('all'); // all, weapon, armor, treasure
+
+    useEffect(() => {
+        if(token) {
+            api.getUserItems(token).then(data => {
+                if(Array.isArray(data)) setItems(data);
+            });
+        }
+    }, [token]);
+
+    const filteredItems = filter === 'all' ? items : items.filter(i => i.type === filter);
+
+    return (
+        <div className="space-y-4">
+            <h2 className="text-xl font-bold border-l-4 border-blue-500 pl-3 flex items-center gap-2">
+                <ShoppingBag size={24}/> 仓库物资
+            </h2>
+
+            {/* Filters */}
+            <div className="flex gap-2 bg-stone-800 p-1 rounded-lg border border-stone-700">
+                {['all', 'weapon', 'armor', 'treasure'].map(t => (
+                    <button
+                        key={t}
+                        onClick={() => setFilter(t)}
+                        className={`flex-1 py-1.5 text-xs md:text-sm font-bold rounded capitalize transition-colors ${filter === t ? 'bg-stone-600 text-white shadow' : 'text-stone-400 hover:text-stone-300'}`}
+                    >
+                        {t === 'all' ? '全部' : t === 'weapon' ? '武器' : t === 'armor' ? '防具' : '宝物'}
+                    </button>
+                ))}
+            </div>
+
+            {/* Item Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {filteredItems.map(item => {
+                    const style = STAR_STYLES[item.stars] || STAR_STYLES[1];
+                    return (
+                        <div key={item.id} className="bg-stone-800 rounded-lg p-3 border border-stone-700 flex gap-3 shadow-md relative overflow-hidden">
+                            {/* Icon */}
+                            <div className={`w-16 h-16 shrink-0 rounded border-2 ${style.border} bg-stone-900 flex items-center justify-center relative`}>
+                                <div className={`absolute inset-0 opacity-10 ${style.bg}`}></div>
+                                {item.type === 'weapon' && <Sword size={24} className={style.text} />}
+                                {item.type === 'armor' && <Shield size={24} className={style.text} />}
+                                {item.type === 'treasure' && <Box size={24} className={style.text} />}
+                            </div>
+
+                            {/* Details */}
+                            <div className="flex-1 flex flex-col justify-between">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <div className={`font-bold text-sm ${style.text}`}>{item.name}</div>
+                                        <div className="text-xs text-stone-500 uppercase">{item.type === 'weapon' ? '武器' : item.type === 'armor' ? '防具' : '宝物'}</div>
+                                    </div>
+                                    <div className="text-xs font-bold bg-stone-900 px-1.5 py-0.5 rounded text-stone-400">
+                                        {item.stars}★
+                                    </div>
+                                </div>
+                                <div className="flex justify-between items-end mt-2">
+                                    <div className="text-xs text-stone-300 bg-stone-900/50 px-2 py-1 rounded">
+                                        加成 <span className="text-amber-500 font-mono">+{item.stat_bonus}</span>
+                                    </div>
+                                    {item.equipped_by && (
+                                        <div className="text-[10px] px-2 py-0.5 rounded bg-blue-900/30 text-blue-300 border border-blue-800 flex items-center gap-1">
+                                            <Users size={10}/> {item.equipped_by}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+                {filteredItems.length === 0 && (
+                    <div className="col-span-full text-center py-10 text-stone-500 text-sm italic">
+                        暂无此类物品
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 // --- Gallery View ---
 const Gallery = () => {
     const { token } = useAuth();
-    const [meta, setMeta] = useState<{ generals: General[], equipments: Equipment[] }>({ generals: [], equipments: [] });
-    const [collection, setCollection] = useState<{ generalIds: number[], equipmentIds: number[] }>({ generalIds: [], equipmentIds: [] });
+    const [meta, setMeta] = useState<{ generals: General[], equipments: any[] }>({ generals: [], equipments: [] });
+    const [collection, setCollection] = useState<{ generalIds: number[], equipmentIds: number[], assignments?: Record<number, string[]> }>({ generalIds: [], equipmentIds: [] });
     const [tab, setTab] = useState<'generals' | 'equipments'>('generals');
     const [filter, setFilter] = useState('全部'); // For generals
     
@@ -753,6 +841,7 @@ const Gallery = () => {
                 {tab === 'equipments' && meta.equipments.map(e => {
                     const style = STAR_STYLES[e.stars] || STAR_STYLES[1];
                     const owned = isOwned(e.id, 'equip');
+                    const assignedTo = collection.assignments && collection.assignments[e.id];
 
                     return (
                         <div key={e.id} className={`bg-stone-800 rounded-lg p-3 border flex gap-4 shadow-lg transition-all ${owned ? 'border-stone-700' : 'border-stone-800 opacity-60 grayscale'}`}>
@@ -782,10 +871,12 @@ const Gallery = () => {
                                     <span className="font-mono text-amber-500 font-bold">+{e.stat_bonus}</span>
                                 </div>
                                 
-                                <div className="flex items-center gap-1 text-[10px] text-stone-400 mt-1">
-                                    <Landmark size={10} className="text-stone-500" />
-                                    <span>获取: 战役掉落 / 商店</span>
-                                </div>
+                                {assignedTo && assignedTo.length > 0 && (
+                                    <div className="mt-1 text-[10px] text-stone-400 flex items-start gap-1">
+                                        <Users size={10} className="mt-0.5 text-blue-400" />
+                                        <span className="line-clamp-1">当前装备: <span className="text-blue-300">{assignedTo.join(', ')}</span></span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     );
@@ -1098,49 +1189,75 @@ const CampaignPage = () => {
 
             {/* Battle Result Modal */}
             {battleResult && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in px-4">
-                    <div className="bg-stone-900 border-2 border-stone-600 p-1 rounded-2xl shadow-2xl transform scale-100 animate-pop-in w-full max-w-sm relative overflow-hidden">
-                        {/* Decorative Background */}
-                        <div className={`absolute inset-0 opacity-20 bg-gradient-to-b ${battleResult.win ? 'from-amber-500 to-transparent' : 'from-stone-700 to-transparent'}`}></div>
-                        
-                        <div className="relative bg-stone-800 rounded-xl p-8 text-center flex flex-col items-center">
-                            {battleResult.win ? (
-                                <>
-                                    <Trophy size={64} className="text-amber-400 mb-4 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)] animate-bounce" />
-                                    <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-amber-600 drop-shadow-lg mb-2 tracking-wider">
-                                        大获全胜
-                                    </h2>
-                                    <div className="w-full h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent my-4 opacity-50"></div>
-                                    <div className="grid grid-cols-2 gap-6 w-full mb-8">
-                                        <div className="flex flex-col items-center bg-stone-900/50 p-3 rounded-lg border border-stone-700/50">
-                                            <div className="text-yellow-500 font-mono text-2xl font-bold">+{battleResult.rewards?.gold}</div>
-                                            <div className="text-xs text-stone-500 uppercase font-bold tracking-widest mt-1">金币</div>
-                                        </div>
-                                        <div className="flex flex-col items-center bg-stone-900/50 p-3 rounded-lg border border-stone-700/50">
-                                            <div className="text-blue-400 font-mono text-2xl font-bold">+{battleResult.rewards?.exp}</div>
-                                            <div className="text-xs text-stone-500 uppercase font-bold tracking-widest mt-1">经验</div>
-                                        </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <Skull size={64} className="text-stone-600 mb-4" />
-                                    <h2 className="text-4xl font-black text-stone-500 drop-shadow-lg mb-4 tracking-wider">
-                                        战败
-                                    </h2>
-                                    <p className="text-stone-400 mb-8 text-sm">胜败乃兵家常事<br/>请提升战力后再战！</p>
-                                </>
-                            )}
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in px-4">
+                    {/* Victory Light Effects */}
+                    {battleResult.win && (
+                        <div className="absolute pointer-events-none overflow-hidden inset-0 flex items-center justify-center">
+                            <div className="w-[800px] h-[800px] bg-gradient-to-r from-amber-500/0 via-amber-500/10 to-amber-500/0 rotate-45 blur-3xl animate-pulse"></div>
+                            <div className="absolute w-[600px] h-[600px] border-[50px] border-dashed border-amber-500/10 rounded-full animate-spin-slow"></div>
+                        </div>
+                    )}
+
+                    <div className={`relative w-full max-w-sm rounded-2xl border-y-4 ${battleResult.win ? 'border-amber-500 bg-stone-900/90' : 'border-stone-600 bg-stone-950/90'} p-1 shadow-2xl transform animate-pop-in`}>
+                        <div className={`rounded-xl p-6 flex flex-col items-center relative overflow-hidden ${battleResult.win ? 'bg-gradient-to-b from-amber-900/20 to-stone-900' : 'bg-stone-900'}`}>
                             
+                            {/* Header Icon & Title */}
+                            <div className="mb-6 relative">
+                                {battleResult.win ? (
+                                    <>
+                                        <div className="absolute inset-0 bg-amber-500 blur-[40px] opacity-40 animate-pulse"></div>
+                                        <Trophy size={80} className="text-amber-300 relative z-10 drop-shadow-[0_0_15px_rgba(251,191,36,0.8)] animate-bounce" />
+                                    </>
+                                ) : (
+                                    <Skull size={80} className="text-stone-500 relative z-10 drop-shadow-lg" />
+                                )}
+                            </div>
+
+                            <h2 className={`text-4xl font-black tracking-widest uppercase mb-2 ${battleResult.win ? 'text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-amber-600 drop-shadow-sm' : 'text-stone-500'}`}>
+                                {battleResult.win ? '大获全胜' : '战斗失败'}
+                            </h2>
+                            
+                            <div className="w-24 h-1 rounded-full bg-gradient-to-r from-transparent via-current to-transparent opacity-50 mb-6 text-stone-500"></div>
+
+                            {/* Rewards Section */}
+                            {battleResult.win ? (
+                                <div className="grid grid-cols-2 gap-4 w-full mb-8">
+                                    <div className="bg-stone-800/80 border border-amber-500/30 rounded-lg p-3 flex flex-col items-center gap-1 relative overflow-hidden group">
+                                        <div className="absolute inset-0 bg-amber-500/5 group-hover:bg-amber-500/10 transition"></div>
+                                        <div className="p-2 bg-stone-900 rounded-full border border-stone-700">
+                                            <div className="text-yellow-500">💰</div>
+                                        </div>
+                                        <span className="text-stone-400 text-[10px] font-bold uppercase tracking-wider">金币</span>
+                                        <span className="text-xl font-bold text-yellow-400">+{battleResult.rewards?.gold}</span>
+                                    </div>
+                                    <div className="bg-stone-800/80 border border-blue-500/30 rounded-lg p-3 flex flex-col items-center gap-1 relative overflow-hidden group">
+                                        <div className="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition"></div>
+                                        <div className="p-2 bg-stone-900 rounded-full border border-stone-700">
+                                            <div className="text-blue-500">✨</div>
+                                        </div>
+                                        <span className="text-stone-400 text-[10px] font-bold uppercase tracking-wider">经验</span>
+                                        <span className="text-xl font-bold text-blue-300">+{battleResult.rewards?.exp}</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-stone-800/50 rounded-lg p-4 mb-8 border border-stone-700/50 text-center w-full">
+                                    <p className="text-stone-400 text-sm leading-relaxed">
+                                        胜败乃兵家常事。<br/>
+                                        <span className="text-stone-500 text-xs">强化武将或调整阵型后再战！</span>
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Action Button */}
                             <button 
                                 onClick={() => setBattleResult(null)}
-                                className={`w-full py-3 rounded-lg font-bold text-white shadow-lg active:scale-95 transition flex items-center justify-center gap-2 ${
-                                    battleResult.win 
-                                    ? 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 shadow-amber-900/50' 
-                                    : 'bg-stone-700 hover:bg-stone-600'
-                                }`}
+                                className={`w-full py-3.5 rounded-lg font-bold text-white shadow-lg active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 text-lg
+                                    ${battleResult.win 
+                                        ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 border-t border-amber-400/50 shadow-[0_4px_20px_rgba(245,158,11,0.4)]' 
+                                        : 'bg-stone-700 hover:bg-stone-600 border-t border-stone-500/50'
+                                    }`}
                             >
-                                确定
+                                <span>{battleResult.win ? '收入囊中' : '重整旗鼓'}</span>
                             </button>
                         </div>
                     </div>
