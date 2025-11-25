@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
-import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star, Box, Compass } from 'lucide-react';
+import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star, Box, Compass, Trophy, Skull } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS, STAR_STYLES, Equipment } from './types';
 
 // --- API Service ---
@@ -147,6 +147,13 @@ const ToastProvider = ({ children }: { children: ReactNode }) => {
                 }
                 .animate-flash {
                     animation: flash-white 0.5s ease-out forwards;
+                }
+                @keyframes pop-in {
+                    0% { transform: scale(0.8); opacity: 0; }
+                    100% { transform: scale(1); opacity: 1; }
+                }
+                .animate-pop-in {
+                    animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
                 }
             `}</style>
             <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
@@ -1046,6 +1053,7 @@ const Barracks = () => {
 const CampaignPage = () => {
     const { token, refreshUser } = useAuth();
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+    const [battleResult, setBattleResult] = useState<{win: boolean, rewards?: {gold: number, exp: number}} | null>(null);
     const toast = useToast();
 
     useEffect(() => {
@@ -1056,14 +1064,14 @@ const CampaignPage = () => {
         if(!token) return;
         const res = await api.battle(token, id);
         if(res.error) return toast.show(res.error, 'error');
+        
         if(res.win) {
-            toast.show(`战役胜利! 获得金币 ${res.rewards.gold}`, 'success');
             const updated = await api.getCampaigns(token);
             setCampaigns(updated);
             refreshUser();
-        } else {
-            toast.show('战斗失败，请提升武将战力', 'info');
         }
+        
+        setBattleResult(res);
     };
 
     return (
@@ -1087,6 +1095,57 @@ const CampaignPage = () => {
                     </div>
                 ))}
             </div>
+
+            {/* Battle Result Modal */}
+            {battleResult && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in px-4">
+                    <div className="bg-stone-900 border-2 border-stone-600 p-1 rounded-2xl shadow-2xl transform scale-100 animate-pop-in w-full max-w-sm relative overflow-hidden">
+                        {/* Decorative Background */}
+                        <div className={`absolute inset-0 opacity-20 bg-gradient-to-b ${battleResult.win ? 'from-amber-500 to-transparent' : 'from-stone-700 to-transparent'}`}></div>
+                        
+                        <div className="relative bg-stone-800 rounded-xl p-8 text-center flex flex-col items-center">
+                            {battleResult.win ? (
+                                <>
+                                    <Trophy size={64} className="text-amber-400 mb-4 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)] animate-bounce" />
+                                    <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-amber-600 drop-shadow-lg mb-2 tracking-wider">
+                                        大获全胜
+                                    </h2>
+                                    <div className="w-full h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent my-4 opacity-50"></div>
+                                    <div className="grid grid-cols-2 gap-6 w-full mb-8">
+                                        <div className="flex flex-col items-center bg-stone-900/50 p-3 rounded-lg border border-stone-700/50">
+                                            <div className="text-yellow-500 font-mono text-2xl font-bold">+{battleResult.rewards?.gold}</div>
+                                            <div className="text-xs text-stone-500 uppercase font-bold tracking-widest mt-1">金币</div>
+                                        </div>
+                                        <div className="flex flex-col items-center bg-stone-900/50 p-3 rounded-lg border border-stone-700/50">
+                                            <div className="text-blue-400 font-mono text-2xl font-bold">+{battleResult.rewards?.exp}</div>
+                                            <div className="text-xs text-stone-500 uppercase font-bold tracking-widest mt-1">经验</div>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <Skull size={64} className="text-stone-600 mb-4" />
+                                    <h2 className="text-4xl font-black text-stone-500 drop-shadow-lg mb-4 tracking-wider">
+                                        战败
+                                    </h2>
+                                    <p className="text-stone-400 mb-8 text-sm">胜败乃兵家常事<br/>请提升战力后再战！</p>
+                                </>
+                            )}
+                            
+                            <button 
+                                onClick={() => setBattleResult(null)}
+                                className={`w-full py-3 rounded-lg font-bold text-white shadow-lg active:scale-95 transition flex items-center justify-center gap-2 ${
+                                    battleResult.win 
+                                    ? 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 shadow-amber-900/50' 
+                                    : 'bg-stone-700 hover:bg-stone-600'
+                                }`}
+                            >
+                                确定
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
