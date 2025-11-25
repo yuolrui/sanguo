@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star, Box, Compass, Trophy, Skull, X } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS, STAR_STYLES, Equipment } from './types';
@@ -280,7 +280,7 @@ const Panel = ({ children, className = '', title }: { children?: ReactNode, clas
     </div>
 );
 
-const Button = ({ children, onClick, variant = 'primary', disabled = false, className = '' }: { children?: ReactNode, onClick?: () => void, variant?: 'primary'|'secondary'|'danger'|'disabled', disabled?: boolean, className?: string }) => {
+const Button = ({ children, onClick, variant = 'primary', disabled = false, className = '', title }: { children?: ReactNode, onClick?: () => void, variant?: 'primary'|'secondary'|'danger'|'disabled', disabled?: boolean, className?: string, title?: string }) => {
     const baseStyles = "relative px-4 py-2 rounded-sm font-bold font-serif border-2 shadow-md active:scale-95 transition-all duration-100 flex items-center justify-center gap-2 uppercase tracking-widest text-sm";
     const variants = {
         primary: "bg-gradient-to-b from-red-900 to-[#2c0b0e] border-[#5D4037] text-gold-100 hover:brightness-110 shadow-red-900/20",
@@ -291,7 +291,7 @@ const Button = ({ children, onClick, variant = 'primary', disabled = false, clas
     const activeVariant = disabled ? variants.disabled : variants[variant];
 
     return (
-        <button onClick={disabled ? undefined : onClick} className={`${baseStyles} ${activeVariant} ${className}`}>
+        <button onClick={disabled ? undefined : onClick} className={`${baseStyles} ${activeVariant} ${className}`} title={title} disabled={disabled}>
             {children}
         </button>
     );
@@ -690,7 +690,7 @@ const Inventory = () => {
 
             <div className="flex gap-2 p-1 bg-[#1a1816] border border-[#3E2723]">
                 {['all', 'weapon', 'armor', 'treasure'].map(t => (
-                    <button key={t} onClick={() => setFilter(t)} className={`flex-1 py-2 text-xs font-bold font-serif transition-colors border border-transparent ${filter === t ? 'bg-[#3E2723] text-gold-300 border-[#5D4037]' : 'text-stone-500 hover:text-stone-300'}`}>
+                    <button key={t} onClick={() => setFilter(t)} className={`flex-1 py-2 text-xs font-bold font-serif transition-colors border border-transparent rounded-sm ${filter === t ? 'bg-[#3E2723] text-gold-300 border-[#5D4037]' : 'text-stone-500 hover:text-stone-300'}`}>
                         {t === 'all' ? '全部' : t === 'weapon' ? '兵刃' : t === 'armor' ? '防具' : '宝物'}
                     </button>
                 ))}
@@ -700,7 +700,7 @@ const Inventory = () => {
                 {filteredItems.map(item => {
                     const style = STAR_STYLES[item.stars] || STAR_STYLES[1];
                     return (
-                        <div key={item.id} className="bg-[#2c2824] p-3 border-2 border-[#3E2723] flex gap-3 relative shadow-lg">
+                        <div key={item.id} className="bg-[#2c2824] p-3 border-2 border-[#3E2723] flex gap-3 relative shadow-lg rounded-sm">
                             <div className={`w-16 h-16 shrink-0 border-2 ${style.border} bg-[#1a1816] flex items-center justify-center`}>
                                 {item.type === 'weapon' && <Sword size={24} className={style.text} />}
                                 {item.type === 'armor' && <Shield size={24} className={style.text} />}
@@ -713,7 +713,7 @@ const Inventory = () => {
                                 </div>
                                 <div className="mt-2 flex justify-between items-end">
                                     <div className="text-xs text-stone-400">加成 <span className="text-gold-500">+{item.stat_bonus}</span></div>
-                                    {item.equipped_by && <div className="text-[10px] text-blue-400 bg-blue-900/20 px-2 py-0.5 border border-blue-800">已装备: {item.equipped_by}</div>}
+                                    {item.equipped_by && <div className="text-[10px] text-blue-300 bg-blue-900/30 px-2 py-0.5 border border-blue-800">已装备: {item.equipped_by}</div>}
                                 </div>
                             </div>
                         </div>
@@ -746,7 +746,7 @@ const Gallery = () => {
     return (
         <div className="space-y-4">
             {selectedGeneral && <GeneralDetailModal general={selectedGeneral} onClose={() => setSelectedGeneral(null)} />}
-            <div className="bg-[#2c1810] text-paper-200 p-3 border-b-2 border-gold-700 flex justify-between items-center font-calligraphy text-xl">
+            <div className="bg-[#2c1810] text-paper-200 p-3 border-b-2 border-gold-700 flex justify-between items-center font-calligraphy text-xl shadow-md">
                 <span><BookOpen className="inline mr-2"/>图鉴</span>
                 <span className="text-sm font-sans text-stone-400">收集: <span className="text-gold-500">{tab==='generals'?collection.generalIds.length:collection.equipmentIds.length}</span> / {tab==='generals'?meta.generals.length:meta.equipments.length}</span>
             </div>
@@ -759,7 +759,7 @@ const Gallery = () => {
             {tab === 'generals' && (
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                     {['全部', '魏', '蜀', '吴', '群'].map(c => (
-                        <button key={c} onClick={() => setFilter(c)} className={`px-4 py-1 border ${filter === c ? 'bg-red-900 border-red-700 text-paper-100' : 'bg-[#1a1816] border-[#3E2723] text-stone-500'} font-serif font-bold text-sm min-w-[60px]`}>{c}</button>
+                        <button key={c} onClick={() => setFilter(c)} className={`px-4 py-1 border ${filter === c ? 'bg-red-900 border-red-700 text-[#E8E4C9]' : 'bg-[#1a1816] border-[#3E2723] text-stone-500'} font-serif font-bold text-sm min-w-[60px] rounded-sm`}>{c}</button>
                     ))}
                 </div>
             )}
@@ -782,7 +782,7 @@ const Gallery = () => {
                                 <div className="text-[10px] text-stone-400 line-clamp-2 italic">"{g.description}"</div>
                                 {g.skill_name && <div className="text-[9px] text-purple-300 mt-1">技能: {g.skill_name}</div>}
                                 <div className="flex gap-1 mt-1 flex-wrap">
-                                    {getGeneralBonds(g).map(b => <span key={b.name} className="text-[9px] border border-stone-600 px-1 text-stone-300">{b.name}</span>)}
+                                    {getGeneralBonds(g).map(b => <span key={b.name} className="text-[9px] border border-stone-600 px-1 text-stone-300 bg-[#1a1816]"><LinkIcon size={8} className="mr-1"/>{b.name}</span>)}
                                 </div>
                             </div>
                         </div>
@@ -793,7 +793,7 @@ const Gallery = () => {
                     const owned = isOwned(e.id, 'equip');
                     const assigned = collection.assignments?.[e.id];
                     return (
-                        <div key={e.id} className={`bg-[#2c2824] p-2 border border-[#3E2723] flex gap-3 relative ${!owned ? 'opacity-50 grayscale' : ''}`}>
+                        <div key={e.id} className={`bg-[#2c2824] p-2 border border-[#3E2723] flex gap-3 relative rounded-sm ${!owned ? 'opacity-50 grayscale' : ''}`}>
                             <div className={`w-16 h-16 shrink-0 border-2 ${style.border} bg-[#1a1816] flex items-center justify-center`}>
                                 {e.type === 'weapon' && <Sword size={24} className={style.text} />}
                                 {e.type === 'armor' && <Shield size={24} className={style.text} />}
@@ -847,8 +847,11 @@ const Barracks = () => {
         }
     };
 
+    // Sort Team by Power (Descending)
     const team = generals.filter(g => g.is_in_team).sort((a, b) => calculatePower(b) - calculatePower(a));
     const activeBonds = getActiveBonds(team);
+    
+    // Sort Roster: Deployed First -> Stars Desc -> Power Desc
     const sortedGenerals = [...generals].sort((a, b) => {
         if (a.is_in_team !== b.is_in_team) return a.is_in_team ? -1 : 1;
         if (b.stars !== a.stars) return b.stars - a.stars;
@@ -902,7 +905,7 @@ const Barracks = () => {
                         const expPercent = Math.min((g.exp / (g.level * 100)) * 100, 100);
 
                         return (
-                            <div key={g.uid} className={`bg-[#2c2824] p-2 border-2 flex gap-3 shadow-md relative ${g.is_in_team ? 'border-gold-700 bg-[#3E2723]' : 'border-[#3E2723]'}`}>
+                            <div key={g.uid} className={`bg-[#2c2824] p-2 border-2 flex gap-3 shadow-md relative rounded-sm ${g.is_in_team ? 'border-gold-700 bg-[#3E2723]' : 'border-[#3E2723]'}`}>
                                 <div onClick={() => setSelectedGeneral(g)} className="relative w-16 h-20 shrink-0 border border-[#1a1816] cursor-pointer">
                                     <img src={g.avatar} className="w-full h-full object-cover" />
                                     <div className={`absolute -top-1 -left-1 w-5 h-5 flex items-center justify-center text-[10px] font-bold text-white rounded-full ${COUNTRY_COLORS[g.country]} border border-black`}>{g.country}</div>
@@ -915,17 +918,16 @@ const Barracks = () => {
                                         </div>
                                         <div className="text-gold-500 font-mono text-sm font-bold">{power}</div>
                                     </div>
-                                    {g.skill_name && <div className="text-[9px] text-purple-300">技: {g.skill_name}</div>}
-                                    <div className="w-full h-1 bg-[#1a1816] mt-1">
+                                    <div className="w-full h-1 bg-[#1a1816] mt-1 border border-stone-700">
                                         <div className="h-full bg-blue-600" style={{width: `${expPercent}%`}}></div>
                                     </div>
                                     <div className="flex justify-between items-end mt-2">
                                         <div className="text-[10px] text-stone-500">碎片: {shardCount}/10</div>
                                         <div className="flex gap-1">
-                                            <Button onClick={() => canEvolve ? handleEvolve(g.uid) : toast.show('碎片不足', 'info')} disabled={!canEvolve} variant={canEvolve ? 'primary' : 'disabled'} className="px-2 py-0.5 text-[10px] h-6"><ChevronUp size={10}/>进阶</Button>
-                                            <Button onClick={() => handleEquip(g.uid)} variant="secondary" className="px-2 py-0.5 text-[10px] h-6"><Zap size={10}/></Button>
-                                            <Button onClick={() => handleUnequip(g.uid)} variant="secondary" className="px-2 py-0.5 text-[10px] h-6"><Trash2 size={10}/></Button>
-                                            <Button onClick={() => { if(!g.is_in_team && isTeamFull) return toast.show('部队已满', 'error'); toggle(g.uid, g.is_in_team); }} variant={g.is_in_team ? 'danger' : 'secondary'} className={`px-2 py-0.5 text-[10px] h-6 ${!g.is_in_team && isTeamFull ? 'grayscale opacity-50' : ''}`}>{g.is_in_team ? '下阵' : '上阵'}</Button>
+                                            <Button onClick={() => canEvolve ? handleEvolve(g.uid) : toast.show(`需要10个碎片 (当前: ${shardCount})`, 'info')} disabled={!canEvolve} variant={canEvolve ? 'primary' : 'disabled'} className="px-2 py-0.5 text-[10px] h-6"><ChevronUp size={10}/>进阶</Button>
+                                            <Button onClick={() => handleEquip(g.uid)} variant="secondary" className="px-2 py-0.5 text-[10px] h-6" title="自动装备"><Zap size={10}/></Button>
+                                            <Button onClick={() => handleUnequip(g.uid)} variant="secondary" className="px-2 py-0.5 text-[10px] h-6" title="卸下装备"><Trash2 size={10}/></Button>
+                                            <Button onClick={() => { if(!g.is_in_team && isTeamFull) return toast.show('部队已满 (5人)', 'error'); toggle(g.uid, g.is_in_team); }} variant={g.is_in_team ? 'danger' : 'secondary'} className={`px-2 py-0.5 text-[10px] h-6 ${!g.is_in_team && isTeamFull ? 'grayscale opacity-50' : ''}`}>{g.is_in_team ? '下阵' : '上阵'}</Button>
                                         </div>
                                     </div>
                                 </div>
@@ -961,15 +963,15 @@ const CampaignPage = () => {
 
     return (
         <div className="space-y-6">
-            <div className="bg-[#2c1810] text-paper-200 p-3 border-b-2 border-gold-700 flex justify-between items-center font-calligraphy text-xl">
+            <div className="bg-[#2c1810] text-paper-200 p-3 border-b-2 border-gold-700 flex justify-between items-center font-calligraphy text-xl shadow-md">
                 <span><Sword className="inline mr-2"/>天下征战</span>
             </div>
             <div className="space-y-4">
                 {campaigns.map(c => (
                     <Panel key={c.id} className="flex justify-between items-center bg-gradient-to-r from-[#2c2824] to-[#1a1816]">
                         <div>
-                            <div className="font-bold font-serif text-lg text-paper-100">{c.name}</div>
-                            <div className="text-xs text-stone-500 mt-1">推荐战力 <span className="text-gold-500 font-mono">{c.req_power}</span></div>
+                            <div className="font-bold font-serif text-lg text-[#E8E4C9]">{c.name}</div>
+                            <div className="text-xs text-stone-500 mt-1">推荐战力 <span className="text-[#FBC02D] font-mono">{c.req_power}</span></div>
                         </div>
                         <div className="flex gap-3">
                             {c.passed && c.stars === 3 && <Button onClick={() => fight(c.id)} variant="secondary" className="text-xs px-3">扫荡</Button>}
@@ -981,15 +983,15 @@ const CampaignPage = () => {
 
             {battleResult && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in px-4">
-                    <div className={`relative w-full max-w-md p-1 shadow-2xl transform animate-pop-in border-4 ${battleResult.win ? 'border-gold-500' : 'border-stone-600'}`}>
+                    <div className={`relative w-full max-w-sm p-1 shadow-2xl transform animate-pop-in border-4 ${battleResult.win ? 'border-[#FBC02D]' : 'border-stone-600'}`}>
                         <div className="bg-[#1a1816] p-6 text-center relative overflow-hidden max-h-[80vh] overflow-y-auto">
-                            {battleResult.win && <div className="absolute inset-0 bg-gold-500/10 animate-pulse pointer-events-none"></div>}
+                            {battleResult.win && <div className="absolute inset-0 bg-[#FBC02D]/10 animate-pulse pointer-events-none"></div>}
                             
-                            <div className="mb-4 relative z-10 flex justify-center">
-                                {battleResult.win ? <Trophy size={60} className="text-gold-500 drop-shadow-lg animate-bounce" /> : <Skull size={60} className="text-stone-500" />}
+                            <div className="mb-6 relative z-10 flex justify-center">
+                                {battleResult.win ? <Trophy size={80} className="text-[#FBC02D] drop-shadow-lg animate-bounce" /> : <Skull size={80} className="text-stone-500" />}
                             </div>
 
-                            <h2 className={`text-3xl font-calligraphy mb-4 ${battleResult.win ? 'text-gold-300' : 'text-stone-500'}`}>
+                            <h2 className={`text-4xl font-calligraphy mb-4 ${battleResult.win ? 'text-[#FBC02D]' : 'text-stone-500'}`}>
                                 {battleResult.win ? '大获全胜' : '兵败如山倒'}
                             </h2>
 
@@ -1009,7 +1011,7 @@ const CampaignPage = () => {
                                     <div className="flex justify-center gap-8 py-4 border-y border-[#3E2723]">
                                         <div className="text-center">
                                             <div className="text-xs text-stone-500 uppercase">赏金</div>
-                                            <div className="text-xl font-bold text-gold-400">+{battleResult.rewards?.gold}</div>
+                                            <div className="text-xl font-bold text-[#FBC02D]">+{battleResult.rewards?.gold}</div>
                                         </div>
                                         <div className="text-center">
                                             <div className="text-xs text-stone-500 uppercase">历练</div>
@@ -1018,10 +1020,10 @@ const CampaignPage = () => {
                                     </div>
                                     {battleResult.levelUps && battleResult.levelUps.length > 0 && (
                                         <div className="text-left bg-[#2c1810] p-2 border border-[#3E2723]">
-                                            <div className="text-xs text-center text-gold-700 mb-2">- 将领晋升 -</div>
+                                            <div className="text-xs text-center text-[#FBC02D] mb-2">- 将领晋升 -</div>
                                             {battleResult.levelUps.map((u, i) => (
                                                 <div key={i} className="flex justify-between text-sm px-2 py-1">
-                                                    <span className="text-paper-200">{u.name}</span>
+                                                    <span className="text-[#E8E4C9]">{u.name}</span>
                                                     <span className="text-green-500">Lv.{u.from} → Lv.{u.to}</span>
                                                 </div>
                                             ))}
