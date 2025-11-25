@@ -712,7 +712,7 @@ const Inventory = () => {
 // --- Gallery View ---
 const Gallery = () => {
     const { token } = useAuth();
-    const [meta, setMeta] = useState<{ generals: General[], equipments: any[] }>({ generals: [], equipments: [] });
+    const [meta, setMeta] = useState<{ generals: General[], equipments: Equipment[] }>({ generals: [], equipments: [] });
     const [collection, setCollection] = useState<{ generalIds: number[], equipmentIds: number[], assignments?: Record<number, string[]> }>({ generalIds: [], equipmentIds: [] });
     const [tab, setTab] = useState<'generals' | 'equipments'>('generals');
     const [filter, setFilter] = useState('全部'); // For generals
@@ -1280,7 +1280,7 @@ export default function App() {
                         <Route path="/gallery" element={<Layout><Gallery /></Layout>} />
                         <Route path="/barracks" element={<Layout><Barracks /></Layout>} />
                         <Route path="/campaign" element={<Layout><CampaignPage /></Layout>} />
-                        <Route path="/inventory" element={<Layout><div className="text-center p-10 text-stone-500">装备在军营中管理</div></Layout>} />
+                        <Route path="/inventory" element={<Layout><Inventory /></Layout>} />
                     </Routes>
                 </AuthProvider>
             </ToastProvider>
