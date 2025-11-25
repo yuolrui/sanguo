@@ -19,6 +19,8 @@ export interface General {
     avatar: string;
     description: string;
     converted?: boolean;
+    skill_name?: string;
+    skill_desc?: string;
 }
 
 export interface Equipment {

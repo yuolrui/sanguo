@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate, useLocation } from 'react-router-dom';
-import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star, Box, Compass, Trophy, Skull } from 'lucide-react';
+import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star, Box, Compass, Trophy, Skull, X } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS, STAR_STYLES, Equipment } from './types';
 
 // --- API Service ---
@@ -106,10 +106,16 @@ const ToastProvider = ({ children }: { children: ReactNode }) => {
                 .toast-enter {
                     animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 }
-                /* Custom Animations */
                 @keyframes paperUnfurl {
                     from { height: 0; opacity: 0; }
                     to { height: 100%; opacity: 1; }
+                }
+                .scrollbar-hide::-webkit-scrollbar {
+                    display: none;
+                }
+                .scrollbar-hide {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
                 }
             `}</style>
             <div className="fixed top-8 right-4 z-[100] flex flex-col gap-3 pointer-events-none">
@@ -121,10 +127,7 @@ const ToastProvider = ({ children }: { children: ReactNode }) => {
                           t.type === 'error' ? 'border-red-800' : 
                           'border-blue-700'}
                     `}>
-                        {/* Paper Texture Overlay */}
                         <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/rice-paper.png')] pointer-events-none"></div>
-                        
-                        {/* Decorative Ends */}
                         <div className="absolute left-0 top-0 bottom-0 w-2 bg-[#2c1810] rounded-l-sm"></div>
                         <div className="absolute right-0 top-0 bottom-0 w-2 bg-[#2c1810] rounded-r-sm"></div>
 
@@ -197,10 +200,8 @@ const Layout = ({ children }: { children: ReactNode }) => {
 
     return (
         <div className="min-h-screen bg-[#1a1816] text-stone-200 font-serif pb-safe relative">
-            {/* Background Overlay Texture */}
             <div className="fixed inset-0 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-20 z-0"></div>
 
-            {/* Header */}
             <header className="bg-[#2c1810] border-b-2 border-[#5D4037] p-4 sticky top-0 z-50 flex justify-between items-center shadow-lg relative">
                 <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F57F17] to-transparent opacity-50"></div>
                 <div className="flex items-center gap-3">
@@ -228,12 +229,10 @@ const Layout = ({ children }: { children: ReactNode }) => {
                 </div>
             </header>
 
-            {/* Main Content */}
             <main className="pb-24 p-4 max-w-5xl mx-auto relative z-10">
                 {children}
             </main>
 
-            {/* Bottom Nav (Wooden Dock Style) */}
             <nav className="fixed bottom-0 left-0 w-full bg-[#2c1810] border-t-4 border-[#3E2723] flex justify-around p-1 pb-safe-bottom text-[10px] z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.5)]">
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-[#5D4037]"></div>
                 {navItems.map((item) => {
@@ -264,7 +263,6 @@ const Layout = ({ children }: { children: ReactNode }) => {
 // --- Reusable UI Components ---
 const Panel = ({ children, className = '', title }: { children: ReactNode, className?: string, title?: ReactNode }) => (
     <div className={`bg-[#2c2824]/95 border-2 border-[#3E2723] rounded-sm shadow-2xl relative overflow-hidden ${className}`}>
-        {/* Corner Ornaments */}
         <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-gold-700 z-10"></div>
         <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-gold-700 z-10"></div>
         <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-gold-700 z-10"></div>
@@ -299,6 +297,85 @@ const Button = ({ children, onClick, variant = 'primary', disabled = false, clas
     );
 };
 
+// --- Detailed Modal ---
+const GeneralDetailModal = ({ general, onClose }: { general: General | UserGeneral, onClose: () => void }) => {
+    const style = STAR_STYLES[general.stars] || STAR_STYLES[1];
+    const isUserGeneral = (g: General | UserGeneral): g is UserGeneral => 'uid' in g;
+    const maxStat = 120;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fade-in" onClick={onClose}>
+            <div className="relative w-full max-w-lg bg-[#2c1810] border-4 border-[#5D4037] shadow-2xl rounded-sm overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="bg-[#3E2723] p-4 flex justify-between items-center border-b-2 border-[#FBC02D]">
+                    <div className="flex items-center gap-3">
+                        <div className={`px-2 py-0.5 text-xs font-bold text-white rounded-sm ${COUNTRY_COLORS[general.country]}`}>{general.country}</div>
+                        <h2 className={`text-2xl font-calligraphy ${style.text}`}>{general.name}</h2>
+                        <div className="flex gap-0.5">{Array.from({length: general.stars}).map((_, i) => <Star key={i} size={12} className={style.text} fill="currentColor"/>)}</div>
+                    </div>
+                    <button onClick={onClose} className="text-stone-400 hover:text-white"><X size={24}/></button>
+                </div>
+
+                <div className="p-6 overflow-y-auto max-h-[70vh] space-y-6 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')]">
+                    <div className="flex gap-6">
+                        <div className={`w-32 h-48 shrink-0 border-4 ${style.border} shadow-lg relative bg-[#1a1816]`}>
+                            <img src={general.avatar} className="w-full h-full object-cover" />
+                        </div>
+                        
+                        <div className="flex-1 space-y-3">
+                            {[
+                                { label: '武力', val: general.str, color: 'bg-red-600' },
+                                { label: '智力', val: general.int, color: 'bg-blue-600' },
+                                { label: '统率', val: general.ldr, color: 'bg-green-600' },
+                                { label: '运势', val: general.luck, color: 'bg-purple-600' }
+                            ].map(s => (
+                                <div key={s.label}>
+                                    <div className="flex justify-between text-xs font-bold text-stone-400 mb-1">
+                                        <span>{s.label}</span>
+                                        <span className="text-[#E8E4C9]">{s.val}</span>
+                                    </div>
+                                    <div className="h-2 bg-[#1a1816] rounded-full border border-stone-700 overflow-hidden">
+                                        <div className={`h-full ${s.color}`} style={{width: `${Math.min(s.val / maxStat * 100, 100)}%`}}></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="bg-[#1a1816]/50 p-4 border border-[#5D4037] rounded-sm relative">
+                        <div className="absolute -top-3 left-3 bg-[#2c1810] px-2 text-xs text-[#FBC02D] font-bold border border-[#5D4037]">专属技能</div>
+                        <div className="font-bold text-[#E8E4C9] mb-1">{general.skill_name || '无'}</div>
+                        <div className="text-xs text-stone-400 leading-relaxed">{general.skill_desc || '暂无技能描述'}</div>
+                    </div>
+
+                    {isUserGeneral(general) && (
+                        <div>
+                            <h4 className="text-sm font-bold text-[#8D6E63] mb-2 uppercase tracking-widest border-b border-[#3E2723] pb-1">当前装备</h4>
+                            <div className="flex gap-2">
+                                {['weapon', 'armor', 'treasure'].map(type => {
+                                    const eq = general.equipments.find(e => e.type === type);
+                                    return (
+                                        <div key={type} className={`w-12 h-12 border-2 ${eq ? STAR_STYLES[eq.stars].border : 'border-stone-700 dashed'} bg-[#1a1816] flex items-center justify-center`}>
+                                            {eq ? (
+                                                type === 'weapon' ? <Sword size={20} className={STAR_STYLES[eq.stars].text}/> :
+                                                type === 'armor' ? <Shield size={20} className={STAR_STYLES[eq.stars].text}/> :
+                                                <Box size={20} className={STAR_STYLES[eq.stars].text}/>
+                                            ) : <span className="text-[9px] text-stone-600">{type === 'weapon' ? '兵' : type === 'armor' ? '甲' : '宝'}</span>}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="text-xs text-stone-500 italic border-t border-[#3E2723] pt-4">
+                        "{general.description}"
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // --- Pages ---
 const Login = () => {
     const [isReg, setIsReg] = useState(false);
@@ -328,13 +405,11 @@ const Login = () => {
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#1a1816] bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] p-4">
             <div className="relative w-full max-w-md">
-                {/* Scroll Top */}
                 <div className="h-12 bg-[#e8e4c9] rounded-t-lg shadow-lg flex items-center justify-center border-b-2 border-[#2c1810] relative overflow-hidden">
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/rice-paper.png')] opacity-50"></div>
                     <div className="w-full h-2 bg-[#2c1810] absolute top-2"></div>
                 </div>
                 
-                {/* Scroll Body */}
                 <div className="bg-[#f4e4bc] text-[#2c1810] p-8 shadow-2xl relative">
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/rice-paper.png')] opacity-30 pointer-events-none"></div>
                     
@@ -362,7 +437,6 @@ const Login = () => {
                     </div>
                 </div>
 
-                {/* Scroll Bottom */}
                 <div className="h-12 bg-[#e8e4c9] rounded-b-lg shadow-lg flex items-center justify-center border-t-2 border-[#2c1810] relative overflow-hidden">
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/rice-paper.png')] opacity-50"></div>
                     <div className="w-full h-2 bg-[#2c1810] absolute bottom-2"></div>
@@ -540,8 +614,6 @@ const calculatePower = (g: UserGeneral) => {
 };
 
 // --- Bond Logic Definitions ---
-// NOTE: The actual stat boosting logic is handled on the backend for battle calculations.
-// This definition is primarily for UI display (Active Bonds in Barracks, Potential Bonds in Gallery).
 interface BondDef {
     name: string;
     desc: string;
@@ -557,31 +629,26 @@ const BONDS: BondDef[] = [
     { name: '五子良将', desc: '张辽/张郃/徐晃/于禁/乐进 (≥3人)', boost: '攻击+18% (5人+暴击)', generals: ['张辽', '张郃', '徐晃', '于禁', '乐进'], condition: (names) => ['张辽', '张郃', '徐晃', '于禁', '乐进'].filter(n => names.includes(n)).length >= 3 },
     { name: '虎卫双雄', desc: '典韦+许褚', boost: '攻击+30%', generals: ['典韦', '许褚'], condition: (names) => ['典韦', '许褚'].every(n => names.includes(n)) },
     { name: '司马之心', desc: '司马懿/师/昭/邓艾/钟会 (≥3人)', boost: '谋略+20%', generals: ['司马懿', '司马师', '司马昭', '邓艾', '钟会'], condition: (names) => ['司马懿', '司马师', '司马昭', '邓艾', '钟会'].filter(n => names.includes(n)).length >= 3 },
-    
     // Shu
     { name: '桃园结义', desc: '刘备+关羽+张飞', boost: '攻击+25% 援护', generals: ['刘备', '关羽', '张飞'], condition: (names) => ['刘备', '关羽', '张飞'].every(n => names.includes(n)) },
     { name: '五虎上将', desc: '关羽/张飞/赵云/马超/黄忠 (≥3人)', boost: '暴伤+30% (5人破防)', generals: ['关羽', '张飞', '赵云', '马超', '黄忠'], condition: (names) => ['关羽', '张飞', '赵云', '马超', '黄忠'].filter(n => names.includes(n)).length >= 3 },
     { name: '卧龙凤雏', desc: '诸葛亮+庞统', boost: '技能伤害+25%', generals: ['诸葛亮', '庞统'], condition: (names) => ['诸葛亮', '庞统'].every(n => names.includes(n)) },
     { name: '北伐支柱', desc: '诸葛亮/姜维/魏延/王平 (≥3人)', boost: '防御+20% 策防+30%', generals: ['诸葛亮', '姜维', '魏延', '王平'], condition: (names) => ['诸葛亮', '姜维', '魏延', '王平'].filter(n => names.includes(n)).length >= 3 },
-
     // Wu
     { name: '江东双璧', desc: '孙策+周瑜', boost: '速度+20 攻击+15%', generals: ['孙策', '周瑜'], condition: (names) => ['孙策', '周瑜'].every(n => names.includes(n)) },
     { name: '东吴四英', desc: '周瑜/鲁肃/吕蒙/陆逊 (4人)', boost: '火系伤害+40%', generals: ['周瑜', '鲁肃', '吕蒙', '陆逊'], condition: (names) => ['周瑜', '鲁肃', '吕蒙', '陆逊'].every(n => names.includes(n)) },
     { name: '江表虎臣', desc: '程普/黄盖/甘宁/周泰... (≥4人)', boost: '兵力+15% 追击', generals: ['程普', '黄盖', '韩当', '周泰', '蒋钦', '陈武', '董袭', '甘宁', '凌统', '徐盛', '潘璋', '丁奉'], condition: (names) => ['程普', '黄盖', '韩当', '周泰', '蒋钦', '陈武', '董袭', '甘宁', '凌统', '徐盛', '潘璋', '丁奉'].filter(n => names.includes(n)).length >= 4 },
     { name: '孙氏宗亲', desc: '孙坚/孙策/孙权... (≥3人)', boost: '全属性+10%', generals: ['孙坚', '孙策', '孙权', '孙桓', '孙韶'], condition: (names) => ['孙坚', '孙策', '孙权', '孙桓', '孙韶'].filter(n => names.includes(n)).length >= 3 },
-
     // Qun
     { name: '乱世开端', desc: '董卓/吕布/华雄/李傕/郭汜 (≥3人)', boost: '攻击+20% 防御-10%', generals: ['董卓', '吕布', '华雄', '李傕', '郭汜'], condition: (names) => ['董卓', '吕布', '华雄', '李傕', '郭汜'].filter(n => names.includes(n)).length >= 3 },
     { name: '河北庭柱', desc: '颜良/文丑/张郃/高览 (4人)', boost: '首回合攻击+50%', generals: ['颜良', '文丑', '张郃', '高览'], condition: (names) => ['颜良', '文丑', '张郃', '高览'].every(n => names.includes(n)) },
     { name: '白马义从', desc: '公孙瓒+赵云', boost: '速度大幅提升', generals: ['公孙瓒', '赵云'], condition: (names) => ['公孙瓒', '赵云'].every(n => names.includes(n)) },
     { name: '汉室余晖', desc: '卢植/皇甫嵩/朱儁 (3人)', boost: '对群雄伤害+50%', generals: ['卢植', '皇甫嵩', '朱儁'], condition: (names) => ['卢植', '皇甫嵩', '朱儁'].every(n => names.includes(n)) },
-
     // Cross
     { name: '君臣相知', desc: '刘备+诸葛亮', boost: '刘备生存↑ 诸葛亮计策↑', generals: ['刘备', '诸葛亮'], condition: (names) => ['刘备', '诸葛亮'].every(n => names.includes(n)) },
     { name: '宿命之敌', desc: '关羽+庞德', boost: '互相伤害+50%', generals: ['关羽', '庞德'], condition: (names) => ['关羽', '庞德'].every(n => names.includes(n)) },
     { name: '忠义两全', desc: '关羽+张辽', boost: '防御+25% 免控', generals: ['关羽', '张辽'], condition: (names) => ['关羽', '张辽'].every(n => names.includes(n)) },
     { name: '武之极境', desc: '吕布/关羽/典韦... (≥3人)', boost: '攻击+20% 暴击+15%', generals: ['吕布', '关羽', '张飞', '赵云', '马超', '典韦', '许褚'], condition: (names) => ['吕布', '关羽', '张飞', '赵云', '马超', '典韦', '许褚'].filter(n => names.includes(n)).length >= 3 },
-    
     // Fallback Faction Bonds
     { name: '魏国精锐', desc: '魏国 ≥ 3人', boost: '战力+10%', country: '魏', condition: (_: any, countries: string[]) => countries.filter(c => c === '魏').length >= 3 },
     { name: '蜀汉英杰', desc: '蜀国 ≥ 3人', boost: '战力+10%', country: '蜀', condition: (_: any, countries: string[]) => countries.filter(c => c === '蜀').length >= 3 },
@@ -592,9 +659,6 @@ const BONDS: BondDef[] = [
 const getActiveBonds = (team: UserGeneral[]) => {
     const names = team.map(g => g.name);
     const countries = team.map(g => g.country);
-    // Filter logic: Specific named bonds take priority visually, but we can show all active ones.
-    // To avoid clutter, if a specific bond like "Five Tigers" is active, we might want to hide "Shu Heroes" if desired, 
-    // but showing all bonuses is more transparent.
     return BONDS.filter(b => b.condition(names, countries));
 };
 
@@ -667,6 +731,7 @@ const Gallery = () => {
     const [collection, setCollection] = useState<{ generalIds: number[], equipmentIds: number[], assignments?: Record<number, string[]> }>({ generalIds: [], equipmentIds: [] });
     const [tab, setTab] = useState<'generals' | 'equipments'>('generals');
     const [filter, setFilter] = useState('全部');
+    const [selectedGeneral, setSelectedGeneral] = useState<General | null>(null);
     
     useEffect(() => {
         if(token) {
@@ -680,6 +745,7 @@ const Gallery = () => {
 
     return (
         <div className="space-y-4">
+            {selectedGeneral && <GeneralDetailModal general={selectedGeneral} onClose={() => setSelectedGeneral(null)} />}
             <div className="bg-[#2c1810] text-paper-200 p-3 border-b-2 border-gold-700 flex justify-between items-center font-calligraphy text-xl">
                 <span><BookOpen className="inline mr-2"/>图鉴</span>
                 <span className="text-sm font-sans text-stone-400">收集: <span className="text-gold-500">{tab==='generals'?collection.generalIds.length:collection.equipmentIds.length}</span> / {tab==='generals'?meta.generals.length:meta.equipments.length}</span>
@@ -703,7 +769,7 @@ const Gallery = () => {
                     const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
                     const owned = isOwned(g.id, 'general');
                     return (
-                        <div key={g.id} className={`bg-[#2c2824] p-2 border border-[#3E2723] flex gap-3 relative ${!owned ? 'opacity-50 grayscale' : ''}`}>
+                        <div key={g.id} onClick={() => setSelectedGeneral(g)} className={`bg-[#2c2824] p-2 border border-[#3E2723] flex gap-3 relative cursor-pointer hover:border-gold-700/50 transition-colors ${!owned ? 'opacity-50 grayscale' : ''}`}>
                             <div className="relative w-20 h-24 shrink-0 border-2 border-[#1a1816]">
                                 <img src={g.avatar} className="w-full h-full object-cover" />
                                 <div className={`absolute top-0 left-0 text-[10px] text-white px-1 font-bold ${COUNTRY_COLORS[g.country]}`}>{g.country}</div>
@@ -714,6 +780,7 @@ const Gallery = () => {
                                     <div className="text-stone-500 text-xs">{g.stars}★</div>
                                 </div>
                                 <div className="text-[10px] text-stone-400 line-clamp-2 italic">"{g.description}"</div>
+                                {g.skill_name && <div className="text-[9px] text-purple-300 mt-1">技能: {g.skill_name}</div>}
                                 <div className="flex gap-1 mt-1 flex-wrap">
                                     {getGeneralBonds(g).map(b => <span key={b.name} className="text-[9px] border border-stone-600 px-1 text-stone-300">{b.name}</span>)}
                                 </div>
@@ -749,6 +816,7 @@ const Gallery = () => {
 const Barracks = () => {
     const { token } = useAuth();
     const [generals, setGenerals] = useState<UserGeneral[]>([]);
+    const [selectedGeneral, setSelectedGeneral] = useState<UserGeneral | null>(null);
     const toast = useToast();
 
     const load = () => { if(token) api.getMyGenerals(token).then(setGenerals); };
@@ -790,10 +858,12 @@ const Barracks = () => {
 
     return (
         <div className="space-y-6">
+            {selectedGeneral && <GeneralDetailModal general={selectedGeneral} onClose={() => setSelectedGeneral(null)} />}
+            
             <Panel title={<div className="flex justify-between items-center w-full"><span className="font-calligraphy text-xl text-gold-300">中军大帐</span><Button onClick={autoTeam} variant="secondary" className="text-xs px-2 py-1">一键整编</Button></div>}>
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide min-h-[120px]">
                     {team.length === 0 ? <div className="text-stone-500 text-sm w-full text-center py-8 italic">暂无出战武将</div> : team.map(g => (
-                        <div key={g.uid} className="relative w-20 shrink-0 bg-[#1a1816] border-2 border-gold-700 shadow-lg">
+                        <div key={g.uid} onClick={() => setSelectedGeneral(g)} className="relative w-20 shrink-0 bg-[#1a1816] border-2 border-gold-700 shadow-lg cursor-pointer">
                             <div className="w-full h-24 overflow-hidden relative">
                                 <img src={g.avatar} className="w-full h-full object-cover" />
                                 <div className={`absolute top-0 left-0 px-1 text-[9px] text-white ${COUNTRY_COLORS[g.country]}`}>{g.country}</div>
@@ -833,7 +903,7 @@ const Barracks = () => {
 
                         return (
                             <div key={g.uid} className={`bg-[#2c2824] p-2 border-2 flex gap-3 shadow-md relative ${g.is_in_team ? 'border-gold-700 bg-[#3E2723]' : 'border-[#3E2723]'}`}>
-                                <div className="relative w-16 h-20 shrink-0 border border-[#1a1816]">
+                                <div onClick={() => setSelectedGeneral(g)} className="relative w-16 h-20 shrink-0 border border-[#1a1816] cursor-pointer">
                                     <img src={g.avatar} className="w-full h-full object-cover" />
                                     <div className={`absolute -top-1 -left-1 w-5 h-5 flex items-center justify-center text-[10px] font-bold text-white rounded-full ${COUNTRY_COLORS[g.country]} border border-black`}>{g.country}</div>
                                 </div>
@@ -845,6 +915,7 @@ const Barracks = () => {
                                         </div>
                                         <div className="text-gold-500 font-mono text-sm font-bold">{power}</div>
                                     </div>
+                                    {g.skill_name && <div className="text-[9px] text-purple-300">技: {g.skill_name}</div>}
                                     <div className="w-full h-1 bg-[#1a1816] mt-1">
                                         <div className="h-full bg-blue-600" style={{width: `${expPercent}%`}}></div>
                                     </div>
@@ -871,7 +942,7 @@ const Barracks = () => {
 const CampaignPage = () => {
     const { token, refreshUser } = useAuth();
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-    const [battleResult, setBattleResult] = useState<{win: boolean, rewards?: {gold: number, exp: number}, levelUps?: {name: string, from: number, to: number}[]} | null>(null);
+    const [battleResult, setBattleResult] = useState<{win: boolean, rewards?: {gold: number, exp: number}, levelUps?: {name: string, from: number, to: number}[], battleLog?: string[]} | null>(null);
     const toast = useToast();
 
     useEffect(() => { if(token) api.getCampaigns(token).then(setCampaigns); }, [token]);
@@ -910,17 +981,28 @@ const CampaignPage = () => {
 
             {battleResult && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in px-4">
-                    <div className={`relative w-full max-w-sm p-1 shadow-2xl transform animate-pop-in border-4 ${battleResult.win ? 'border-gold-500' : 'border-stone-600'}`}>
-                        <div className="bg-[#1a1816] p-6 text-center relative overflow-hidden">
-                            {battleResult.win && <div className="absolute inset-0 bg-gold-500/10 animate-pulse"></div>}
+                    <div className={`relative w-full max-w-md p-1 shadow-2xl transform animate-pop-in border-4 ${battleResult.win ? 'border-gold-500' : 'border-stone-600'}`}>
+                        <div className="bg-[#1a1816] p-6 text-center relative overflow-hidden max-h-[80vh] overflow-y-auto">
+                            {battleResult.win && <div className="absolute inset-0 bg-gold-500/10 animate-pulse pointer-events-none"></div>}
                             
-                            <div className="mb-6 relative z-10 flex justify-center">
-                                {battleResult.win ? <Trophy size={80} className="text-gold-500 drop-shadow-lg animate-bounce" /> : <Skull size={80} className="text-stone-500" />}
+                            <div className="mb-4 relative z-10 flex justify-center">
+                                {battleResult.win ? <Trophy size={60} className="text-gold-500 drop-shadow-lg animate-bounce" /> : <Skull size={60} className="text-stone-500" />}
                             </div>
 
-                            <h2 className={`text-4xl font-calligraphy mb-4 ${battleResult.win ? 'text-gold-300' : 'text-stone-500'}`}>
+                            <h2 className={`text-3xl font-calligraphy mb-4 ${battleResult.win ? 'text-gold-300' : 'text-stone-500'}`}>
                                 {battleResult.win ? '大获全胜' : '兵败如山倒'}
                             </h2>
+
+                            {/* Battle Logs */}
+                            <div className="bg-[#2c1810]/80 p-2 rounded mb-4 text-left max-h-32 overflow-y-auto border border-[#3E2723]">
+                                {battleResult.battleLog && battleResult.battleLog.length > 0 ? (
+                                    battleResult.battleLog.map((log, i) => (
+                                        <div key={i} className="text-[10px] text-stone-300 border-b border-stone-800 py-0.5 last:border-0">{log}</div>
+                                    ))
+                                ) : (
+                                    <div className="text-[10px] text-stone-500 italic text-center">双方激战...</div>
+                                )}
+                            </div>
 
                             {battleResult.win ? (
                                 <div className="space-y-4 relative z-10">

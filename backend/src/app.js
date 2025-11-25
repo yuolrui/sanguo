@@ -112,13 +112,9 @@ app.get('/api/user/collection', authenticateToken, async (req, res) => {
     const db = getDB();
     const userId = req.user.id;
     
-    // Get owned generals
     const ownedGenerals = await db.all('SELECT DISTINCT general_id FROM user_generals WHERE user_id = ?', [userId]);
-    
-    // Get owned equipments and who they are assigned to
     const ownedEquipments = await db.all('SELECT equipment_id, general_id FROM user_equipments WHERE user_id = ?', [userId]);
     
-    // Map assignments
     const assignmentsRaw = await db.all(`
         SELECT ue.equipment_id, g.name as general_name
         FROM user_equipments ue
@@ -173,11 +169,9 @@ async function performSingleGacha(db, userId, userPity) {
     const pool = await db.all('SELECT * FROM generals WHERE stars = ?', [star]);
     const winner = pool[Math.floor(Math.random() * pool.length)] || pool[0];
 
-    // Check if user already has this general
     const existing = await db.get('SELECT id FROM user_generals WHERE user_id = ? AND general_id = ?', [userId, winner.id]);
 
     if (existing) {
-        // Convert to shards
         await db.run(`INSERT INTO user_shards (user_id, general_id, count) VALUES (?, ?, 10)
                       ON CONFLICT(user_id, general_id) DO UPDATE SET count = count + 10`, [userId, winner.id]);
         return { winner, newPity, converted: true };
@@ -324,7 +318,7 @@ app.get('/api/campaigns', authenticateToken, async (req, res) => {
   res.json(result);
 });
 
-// Battle Logic
+// Battle Logic (Updated with Skills)
 app.post('/api/battle/:id', authenticateToken, async (req, res) => {
   const campaignId = req.params.id;
   const db = getDB();
@@ -332,7 +326,7 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
   const campaign = await db.get('SELECT * FROM campaigns WHERE id = ?', [campaignId]);
   
   const team = await db.all(`
-    SELECT ug.id, g.name, g.country, g.str, g.int, g.ldr, ug.level, ug.exp, ug.evolution 
+    SELECT ug.id, g.name, g.country, g.str, g.int, g.ldr, g.luck, ug.level, ug.exp, ug.evolution, g.skill_name, g.skill_desc 
     FROM user_generals ug 
     JOIN generals g ON ug.general_id = g.id 
     WHERE ug.user_id = ? AND ug.is_in_team = 1`, [req.user.id]);
@@ -340,6 +334,7 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
   if (team.length === 0) return res.status(400).json({error: 'Please form a team first'});
 
   let rawTotalPower = 0;
+  const battleLog = [];
 
   for (const m of team) {
     let evolutionBonus = 1 + (m.evolution || 0) * 0.1; 
@@ -352,85 +347,54 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
         WHERE ue.general_id = ?
     `, [m.id]);
     equips.forEach(e => generalPower += e.stat_bonus);
+
+    // --- SKILL TRIGGER LOGIC ---
+    // Simple logic: Chance = luck / 2 (capped). Boost = Power * 0.5
+    const triggerChance = Math.min(m.luck, 80) / 100; // 80 luck = 80% chance? A bit high, let's normalize.
+    // Let's say base chance 20% + luck/5 %. 80 luck => 36%
+    const finalChance = 0.2 + (m.luck / 500); 
+    
+    if (Math.random() < finalChance) {
+        const skillBoost = Math.floor(generalPower * 0.4); // 40% boost on trigger
+        generalPower += skillBoost;
+        battleLog.push(`${m.name} 发动了 【${m.skill_name || '奋力一击'}】! 战力激增!`);
+    }
+
     rawTotalPower += generalPower;
   }
 
-  // --- ENHANCED BOND CALCULATION ---
+  // --- BOND CALCULATION ---
   let bondMultiplier = 1.0;
   const names = team.map(g => g.name);
   const countries = team.map(g => g.country);
-  const countryCounts = {};
-  countries.forEach(c => countryCounts[c] = (countryCounts[c] || 0) + 1);
-
-  // Helper: Count how many specific generals are in the team
+  
+  // Helper
   const countGenerals = (targetNames) => names.filter(n => targetNames.includes(n)).length;
   const hasGenerals = (targetNames) => targetNames.every(n => names.includes(n));
 
-  // 1. Wei Bonds
-  if (hasGenerals(['曹操', '夏侯惇', '夏侯渊', '曹仁', '曹洪'])) bondMultiplier += 0.20; // Cao Wei Foundation (Full)
-  else if (countGenerals(['曹操', '夏侯惇', '夏侯渊', '曹仁', '曹洪']) >= 3) bondMultiplier += 0.12; // Foundation (Partial)
+  if (hasGenerals(['曹操', '夏侯惇', '夏侯渊', '曹仁', '曹洪'])) bondMultiplier += 0.20;
+  else if (countGenerals(['曹操', '夏侯惇', '夏侯渊', '曹仁', '曹洪']) >= 3) bondMultiplier += 0.12;
 
-  if (countGenerals(['张辽', '张郃', '徐晃', '于禁', '乐进']) >= 5) bondMultiplier += 0.25; // Five Elites (Full)
-  else if (countGenerals(['张辽', '张郃', '徐晃', '于禁', '乐进']) >= 3) bondMultiplier += 0.18; // Five Elites (Partial)
+  if (countGenerals(['张辽', '张郃', '徐晃', '于禁', '乐进']) >= 5) bondMultiplier += 0.25;
+  else if (countGenerals(['张辽', '张郃', '徐晃', '于禁', '乐进']) >= 3) bondMultiplier += 0.18;
 
-  if (hasGenerals(['典韦', '许褚'])) bondMultiplier += 0.30; // Tiger Guards (Strong Duo)
+  if (hasGenerals(['刘备', '关羽', '张飞'])) bondMultiplier += 0.25;
 
-  if (countGenerals(['司马懿', '司马师', '司马昭', '邓艾', '钟会']) >= 5) bondMultiplier += 0.25; // Sima's Heart (Full)
-  else if (countGenerals(['司马懿', '司马师', '司马昭', '邓艾', '钟会']) >= 3) bondMultiplier += 0.20; // Sima's Heart (Partial)
-
-  // 2. Shu Bonds
-  if (hasGenerals(['刘备', '关羽', '张飞'])) bondMultiplier += 0.25; // Peach Garden (Buffed)
-
-  if (countGenerals(['关羽', '张飞', '赵云', '马超', '黄忠']) >= 5) bondMultiplier += 0.30; // Five Tigers (Full - Critical)
+  if (countGenerals(['关羽', '张飞', '赵云', '马超', '黄忠']) >= 5) bondMultiplier += 0.30;
   else if (countGenerals(['关羽', '张飞', '赵云', '马超', '黄忠']) >= 3) bondMultiplier += 0.18;
 
-  if (hasGenerals(['诸葛亮', '庞统'])) bondMultiplier += 0.25; // Wolong Fengchu
+  if (countGenerals(['周瑜', '鲁肃', '吕蒙', '陆逊']) >= 4) bondMultiplier += 0.40;
 
-  if (countGenerals(['诸葛亮', '姜维', '魏延', '王平']) >= 4) bondMultiplier += 0.20; // Northern Expedition (Full)
-  else if (countGenerals(['诸葛亮', '姜维', '魏延', '王平']) >= 3) bondMultiplier += 0.15;
-
-  // 3. Wu Bonds
-  if (hasGenerals(['孙策', '周瑜'])) bondMultiplier += 0.20; // Jiangdong Double Walls
-
-  if (countGenerals(['周瑜', '鲁肃', '吕蒙', '陆逊']) >= 4) bondMultiplier += 0.40; // Four Heroes (Fire Strategy - Massive Boost)
-
-  // Twelve Tiger Subjects (Sample of 4)
-  const tigerSubjects = ['程普', '黄盖', '韩当', '周泰', '蒋钦', '陈武', '董袭', '甘宁', '凌统', '徐盛', '潘璋', '丁奉'];
-  if (countGenerals(tigerSubjects) >= 4) bondMultiplier += 0.15;
-
-  if (countGenerals(['孙坚', '孙策', '孙权', '孙桓', '孙韶']) >= 5) bondMultiplier += 0.20; // Sun Family
-  else if (countGenerals(['孙坚', '孙策', '孙权', '孙桓', '孙韶']) >= 3) bondMultiplier += 0.10;
-
-  // 4. Warlords (Qun)
   if (countGenerals(['董卓', '吕布', '华雄', '李傕', '郭汜']) >= 5) bondMultiplier += 0.25;
-  else if (countGenerals(['董卓', '吕布', '华雄', '李傕', '郭汜']) >= 3) bondMultiplier += 0.15;
-
-  if (countGenerals(['颜良', '文丑', '张郃', '高览']) >= 4) bondMultiplier += 0.30; // Hebei Pillars
-
-  if (hasGenerals(['公孙瓒', '赵云'])) bondMultiplier += 0.15; // White Horse
-
-  if (countGenerals(['卢植', '皇甫嵩', '朱儁']) >= 3) bondMultiplier += 0.30; // Han Echo (Strong vs Yellow Turbans/Qun)
-
-  // 5. Cross Faction
-  if (hasGenerals(['刘备', '诸葛亮'])) bondMultiplier += 0.15;
-  if (hasGenerals(['关羽', '庞德'])) bondMultiplier += 0.20; // Fated Enemies (Aggressive)
-  if (hasGenerals(['关羽', '张辽'])) bondMultiplier += 0.15; // Loyal Friends
   
-  // Martial Peak (Lu Bu + 5 Tigers + Dian/Xu)
-  const martialGods = ['吕布', '关羽', '张飞', '赵云', '马超', '典韦', '许褚'];
-  if (countGenerals(martialGods) >= 5) bondMultiplier += 0.35;
-  else if (countGenerals(martialGods) >= 3) bondMultiplier += 0.20;
-
-  // 6. Simple Faction Bonus (Fallback)
-  // If no specific major bond, give small faction boost
-  if (bondMultiplier === 1.0) {
-      if (Object.values(countryCounts).some(count => count >= 3)) {
-          bondMultiplier += 0.10;
-      }
+  // Faction Fallback
+  const countryCounts = {};
+  countries.forEach(c => countryCounts[c] = (countryCounts[c] || 0) + 1);
+  if (bondMultiplier === 1.0 && Object.values(countryCounts).some(count => count >= 3)) {
+      bondMultiplier += 0.10;
   }
 
   const finalPower = Math.floor(rawTotalPower * bondMultiplier);
-  // --- END BOND CALCULATION ---
 
   const win = finalPower >= campaign.req_power || Math.random() > 0.8; 
   
@@ -473,10 +437,11 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
     res.json({ 
         win: true, 
         rewards: { gold: campaign.gold_drop, exp: campaign.exp_drop },
-        levelUps 
+        levelUps,
+        battleLog
     });
   } else {
-    res.json({ win: false });
+    res.json({ win: false, battleLog });
   }
 });
 
