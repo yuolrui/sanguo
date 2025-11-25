@@ -962,11 +962,20 @@ const Barracks = () => {
     // Calculate Active Bonds
     const activeBonds = getActiveBonds(team);
     
-    // Sort Roster by Stars (desc) then Power (desc)
+    // Sort Roster: 1. In Team (top) -> 2. Stars (desc) -> 3. Power (desc)
     const sortedGenerals = [...generals].sort((a, b) => {
+        // Priority 1: Is in team?
+        if (a.is_in_team && !b.is_in_team) return -1;
+        if (!a.is_in_team && b.is_in_team) return 1;
+        
+        // Priority 2: Stars
         if (b.stars !== a.stars) return b.stars - a.stars;
+        
+        // Priority 3: Power
         return calculatePower(b) - calculatePower(a);
     });
+
+    const isTeamFull = team.length >= 5;
 
     return (
         <div className="space-y-4 md:space-y-6">
@@ -1130,8 +1139,22 @@ const Barracks = () => {
                                             <ChevronUp size={12}/> 进阶
                                         </button>
                                         
-                                        <button onClick={() => toggle(g.uid, g.is_in_team)} 
-                                            className={`px-3 py-1 rounded text-xs border active:scale-95 transition ${g.is_in_team ? 'border-red-800 text-red-400 bg-red-900/10' : 'border-green-800 text-green-400 bg-green-900/10'}`}>
+                                        <button 
+                                            onClick={() => {
+                                                if (!g.is_in_team && isTeamFull) {
+                                                    toast.show('部队已满 (5人)', 'error');
+                                                    return;
+                                                }
+                                                toggle(g.uid, g.is_in_team);
+                                            }} 
+                                            className={`px-3 py-1 rounded text-xs border transition ${
+                                                g.is_in_team 
+                                                    ? 'border-red-800 text-red-400 bg-red-900/10 active:scale-95 hover:bg-red-900/20' 
+                                                    : isTeamFull 
+                                                        ? 'border-stone-600 text-stone-500 bg-stone-800 cursor-not-allowed opacity-50'
+                                                        : 'border-green-800 text-green-400 bg-green-900/10 active:scale-95 hover:bg-green-900/20'
+                                            }`}
+                                        >
                                             {g.is_in_team ? '下阵' : '上阵'}
                                         </button>
                                         <div className="flex border border-stone-600 rounded overflow-hidden">
