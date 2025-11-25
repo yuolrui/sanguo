@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
-import { HashRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Link, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star, Box, Compass, Trophy, Skull, ArrowUpCircle } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS, STAR_STYLES, Equipment } from './types';
 
@@ -106,74 +106,34 @@ const ToastProvider = ({ children }: { children: ReactNode }) => {
                 .toast-enter {
                     animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 }
-                @keyframes fadeInUp {
-                    from { opacity: 0; transform: translateY(20px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                .animate-card-appear {
-                    animation: fadeInUp 0.5s ease-out forwards;
-                    opacity: 0;
-                }
-                @keyframes spin-slow {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-                .animate-spin-slow {
-                    animation: spin-slow 12s linear infinite;
-                }
-                @keyframes pulse-glow {
-                    0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); }
-                    50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.8); }
-                }
-                .animate-pulse-glow {
-                    animation: pulse-glow 1s infinite;
-                }
-                @keyframes shake-hard {
-                    0% { transform: translate(1px, 1px) rotate(0deg); }
-                    10% { transform: translate(-1px, -2px) rotate(-1deg); }
-                    20% { transform: translate(-3px, 0px) rotate(1deg); }
-                    30% { transform: translate(3px, 2px) rotate(0deg); }
-                    40% { transform: translate(1px, -1px) rotate(1deg); }
-                    50% { transform: translate(-1px, 2px) rotate(-1deg); }
-                    60% { transform: translate(-3px, 1px) rotate(0deg); }
-                    70% { transform: translate(3px, 1px) rotate(-1deg); }
-                    80% { transform: translate(-1px, -1px) rotate(1deg); }
-                    90% { transform: translate(1px, 2px) rotate(0deg); }
-                    100% { transform: translate(1px, -2px) rotate(-1deg); }
-                }
-                .animate-shake-hard {
-                    animation: shake-hard 0.5s ease-in-out infinite;
-                }
-                @keyframes flash-white {
-                    0% { opacity: 0; }
-                    50% { opacity: 1; }
-                    100% { opacity: 0; }
-                }
-                .animate-flash {
-                    animation: flash-white 0.5s ease-out forwards;
-                }
-                @keyframes pop-in {
-                    0% { transform: scale(0.8); opacity: 0; }
-                    100% { transform: scale(1); opacity: 1; }
-                }
-                .animate-pop-in {
-                    animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                /* Custom Animations */
+                @keyframes paperUnfurl {
+                    from { height: 0; opacity: 0; }
+                    to { height: 100%; opacity: 1; }
                 }
             `}</style>
-            <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
+            <div className="fixed top-8 right-4 z-[100] flex flex-col gap-3 pointer-events-none">
                 {toasts.map(t => (
                     <div key={t.id} className={`
-                        toast-enter pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl text-white min-w-[300px] max-w-md backdrop-blur-md border-l-4
-                        ${t.type === 'success' ? 'bg-stone-800/95 border-green-500' : 
-                          t.type === 'error' ? 'bg-stone-800/95 border-red-500' : 
-                          'bg-stone-800/95 border-blue-500'}
+                        toast-enter pointer-events-auto relative flex items-center gap-3 px-6 py-4 min-w-[280px] max-w-md
+                        bg-[#e8e4c9] text-[#2c1810] shadow-2xl border-y-4
+                        ${t.type === 'success' ? 'border-green-700' : 
+                          t.type === 'error' ? 'border-red-800' : 
+                          'border-blue-700'}
                     `}>
-                        <div className="shrink-0">
-                            {t.type === 'success' && <CheckCircle size={20} className="text-green-500" />}
-                            {t.type === 'error' && <XCircle size={20} className="text-red-500" />}
-                            {t.type === 'info' && <Info size={20} className="text-blue-500" />}
+                        {/* Paper Texture Overlay */}
+                        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/rice-paper.png')] pointer-events-none"></div>
+                        
+                        {/* Decorative Ends */}
+                        <div className="absolute left-0 top-0 bottom-0 w-2 bg-[#2c1810] rounded-l-sm"></div>
+                        <div className="absolute right-0 top-0 bottom-0 w-2 bg-[#2c1810] rounded-r-sm"></div>
+
+                        <div className="shrink-0 relative z-10">
+                            {t.type === 'success' && <CheckCircle size={24} className="text-green-700" />}
+                            {t.type === 'error' && <XCircle size={24} className="text-red-800" />}
+                            {t.type === 'info' && <Info size={24} className="text-blue-700" />}
                         </div>
-                        <span className="text-sm font-medium tracking-wide text-stone-100">{t.text}</span>
+                        <span className="text-base font-bold tracking-wide font-serif z-10">{t.text}</span>
                     </div>
                 ))}
             </div>
@@ -220,41 +180,122 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 const useAuth = () => useContext(AuthContext);
 
-// --- Components ---
+// --- Layout Components ---
 const Layout = ({ children }: { children: ReactNode }) => {
     const { user, logout } = useAuth();
+    const location = useLocation();
     if (!user) return <Navigate to="/login" />;
 
+    const navItems = [
+        { path: '/', icon: Landmark, label: '主城' },
+        { path: '/campaign', icon: Sword, label: '征战' },
+        { path: '/gacha', icon: Gift, label: '招募' },
+        { path: '/gallery', icon: BookOpen, label: '图鉴' },
+        { path: '/barracks', icon: Users, label: '军营' },
+        { path: '/inventory', icon: ShoppingBag, label: '仓库' },
+    ];
+
     return (
-        <div className="min-h-screen bg-stone-900 text-stone-200 font-sans pb-safe">
-            <header className="bg-stone-800 border-b border-stone-700 p-4 sticky top-0 z-50 flex justify-between items-center shadow-lg">
-                <div className="flex items-center gap-2">
-                    <div className="text-2xl font-bold text-amber-500 tracking-wider">三国志</div>
-                    <span className="text-xs text-stone-400 bg-stone-900 px-2 py-1 rounded">霸业</span>
+        <div className="min-h-screen bg-[#1a1816] text-stone-200 font-serif pb-safe relative">
+            {/* Background Overlay Texture */}
+            <div className="fixed inset-0 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-20 z-0"></div>
+
+            {/* Header */}
+            <header className="bg-[#2c1810] border-b-2 border-[#5D4037] p-4 sticky top-0 z-50 flex justify-between items-center shadow-lg relative">
+                <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#F57F17] to-transparent opacity-50"></div>
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-900 to-black border-2 border-gold-500 flex items-center justify-center shadow-lg">
+                        <span className="font-calligraphy text-2xl text-gold-300">魏</span>
+                    </div>
+                    <div>
+                        <div className="text-2xl font-calligraphy text-gold-300 tracking-widest drop-shadow-md">三国志</div>
+                        <span className="text-[10px] text-stone-400 uppercase tracking-[0.2em] block -mt-1">霸业 Warlord</span>
+                    </div>
                 </div>
                 <div className="flex gap-4 items-center text-sm">
                     <div className="flex flex-col text-right">
-                        <span className="text-amber-400 font-bold max-w-[100px] truncate">{user.username}</span>
-                        <div className="flex gap-2 text-xs">
-                            <span className="text-yellow-500">💰 {user.gold}</span>
-                            <span className="text-green-500">📜 {user.tokens}</span>
+                        <span className="text-paper-100 font-bold max-w-[100px] truncate border-b border-stone-600 pb-0.5 mb-0.5">{user.username}</span>
+                        <div className="flex gap-3 text-xs font-mono">
+                            <span className="text-yellow-500 flex items-center gap-1">
+                                <div className="w-2 h-2 rounded-full bg-yellow-500"></div> {user.gold}
+                            </span>
+                            <span className="text-green-500 flex items-center gap-1">
+                                <div className="w-2 h-2 rounded-full bg-green-500"></div> {user.tokens}
+                            </span>
                         </div>
                     </div>
-                    <button onClick={logout} className="p-2 hover:bg-stone-700 rounded"><LogOut size={18} /></button>
+                    <button onClick={logout} className="p-2 hover:bg-[#3E2723] rounded-full border border-[#5D4037] transition-colors"><LogOut size={16} className="text-stone-400" /></button>
                 </div>
             </header>
-            <main className="pb-24 p-4 max-w-5xl mx-auto">
+
+            {/* Main Content */}
+            <main className="pb-24 p-4 max-w-5xl mx-auto relative z-10">
                 {children}
             </main>
-            <nav className="fixed bottom-0 left-0 w-full bg-stone-900 border-t border-stone-800 flex justify-around p-2 pb-safe-bottom text-[10px] z-50">
-                <Link to="/" className="flex flex-col items-center gap-1 p-2 text-stone-400 hover:text-amber-500 active:scale-95 transition"><Landmark size={20} /><span>主城</span></Link>
-                <Link to="/campaign" className="flex flex-col items-center gap-1 p-2 text-stone-400 hover:text-amber-500 active:scale-95 transition"><Sword size={20} /><span>征战</span></Link>
-                <Link to="/gacha" className="flex flex-col items-center gap-1 p-2 text-stone-400 hover:text-amber-500 active:scale-95 transition"><Gift size={20} /><span>招募</span></Link>
-                <Link to="/gallery" className="flex flex-col items-center gap-1 p-2 text-stone-400 hover:text-amber-500 active:scale-95 transition"><BookOpen size={20} /><span>图鉴</span></Link>
-                <Link to="/barracks" className="flex flex-col items-center gap-1 p-2 text-stone-400 hover:text-amber-500 active:scale-95 transition"><Users size={20} /><span>军营</span></Link>
-                <Link to="/inventory" className="flex flex-col items-center gap-1 p-2 text-stone-400 hover:text-amber-500 active:scale-95 transition"><ShoppingBag size={20} /><span>仓库</span></Link>
+
+            {/* Bottom Nav (Wooden Dock Style) */}
+            <nav className="fixed bottom-0 left-0 w-full bg-[#2c1810] border-t-4 border-[#3E2723] flex justify-around p-1 pb-safe-bottom text-[10px] z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.5)]">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-[#5D4037]"></div>
+                {navItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                        <Link key={item.path} to={item.path} className="relative group flex flex-col items-center gap-1 p-2 min-w-[16%] transition-all">
+                            <div className={`
+                                absolute top-0 left-1/2 -translate-x-1/2 w-full h-1 bg-gradient-to-r from-transparent via-gold-500 to-transparent transition-all duration-300
+                                ${isActive ? 'opacity-100 shadow-[0_0_8px_#F57F17]' : 'opacity-0'}
+                            `}></div>
+                            <div className={`
+                                p-2 rounded-lg transition-all duration-200
+                                ${isActive ? 'bg-[#3E2723] text-gold-300 -translate-y-2 shadow-lg border border-[#5D4037]' : 'text-stone-500 hover:text-stone-300'}
+                            `}>
+                                <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                            </div>
+                            <span className={`font-serif font-bold transition-colors ${isActive ? 'text-gold-300' : 'text-stone-600'}`}>
+                                {item.label}
+                            </span>
+                        </Link>
+                    );
+                })}
             </nav>
         </div>
+    );
+};
+
+// --- Reusable UI Components ---
+const Panel = ({ children, className = '', title }: { children: ReactNode, className?: string, title?: ReactNode }) => (
+    <div className={`bg-[#2c2824]/95 border-2 border-[#3E2723] rounded-sm shadow-2xl relative overflow-hidden ${className}`}>
+        {/* Corner Ornaments */}
+        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-gold-700 z-10"></div>
+        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-gold-700 z-10"></div>
+        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-gold-700 z-10"></div>
+        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-gold-700 z-10"></div>
+        
+        {title && (
+            <div className="bg-gradient-to-r from-transparent via-[#3E2723] to-transparent p-2 mb-2 text-center border-b border-[#4E342E] relative">
+                <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-gold-700 to-transparent opacity-50"></div>
+                {title}
+            </div>
+        )}
+        <div className="p-3 relative z-0">
+            {children}
+        </div>
+    </div>
+);
+
+const Button = ({ children, onClick, variant = 'primary', disabled = false, className = '' }: { children: ReactNode, onClick?: () => void, variant?: 'primary'|'secondary'|'danger'|'disabled', disabled?: boolean, className?: string }) => {
+    const baseStyles = "relative px-4 py-2 rounded-sm font-bold font-serif border-2 shadow-md active:scale-95 transition-all duration-100 flex items-center justify-center gap-2 uppercase tracking-widest text-sm";
+    const variants = {
+        primary: "bg-gradient-to-b from-red-900 to-[#2c0b0e] border-[#5D4037] text-gold-100 hover:brightness-110 shadow-red-900/20",
+        secondary: "bg-gradient-to-b from-[#4E342E] to-[#2C1810] border-[#5D4037] text-[#D7CCC8] hover:brightness-110",
+        danger: "bg-gradient-to-b from-red-700 to-red-900 border-red-500 text-white hover:brightness-110",
+        disabled: "bg-stone-800 border-stone-700 text-stone-500 cursor-not-allowed grayscale opacity-70"
+    };
+    const activeVariant = disabled ? variants.disabled : variants[variant];
+
+    return (
+        <button onClick={disabled ? undefined : onClick} className={`${baseStyles} ${activeVariant} ${className}`}>
+            {children}
+        </button>
     );
 };
 
@@ -285,16 +326,46 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-stone-950 bg-[url('https://picsum.photos/1920/1080?blur=5')] bg-cover px-4">
-            <div className="bg-stone-900/90 p-8 rounded-xl border border-stone-700 shadow-2xl w-full max-w-md backdrop-blur-sm">
-                <h1 className="text-3xl font-bold text-center text-amber-500 mb-6">三国志 · 霸业</h1>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <input className="w-full bg-stone-800 border border-stone-600 p-3 rounded text-stone-200 outline-none focus:border-amber-500" placeholder="账号" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
-                    <input className="w-full bg-stone-800 border border-stone-600 p-3 rounded text-stone-200 outline-none focus:border-amber-500" type="password" placeholder="密码" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
-                    <button className="w-full bg-amber-700 hover:bg-amber-600 text-white font-bold py-3 rounded transition-colors shadow-lg active:scale-95">{isReg ? '注册' : '登录'}</button>
-                </form>
-                <div className="mt-4 text-center text-stone-400 text-sm cursor-pointer hover:text-amber-400 p-2" onClick={() => setIsReg(!isReg)}>
-                    {isReg ? '已有账号？去登录' : '没有账号？去注册'}
+        <div className="min-h-screen flex items-center justify-center bg-[#1a1816] bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] p-4">
+            <div className="relative w-full max-w-md">
+                {/* Scroll Top */}
+                <div className="h-12 bg-[#e8e4c9] rounded-t-lg shadow-lg flex items-center justify-center border-b-2 border-[#2c1810] relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/rice-paper.png')] opacity-50"></div>
+                    <div className="w-full h-2 bg-[#2c1810] absolute top-2"></div>
+                </div>
+                
+                {/* Scroll Body */}
+                <div className="bg-[#f4e4bc] text-[#2c1810] p-8 shadow-2xl relative">
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/rice-paper.png')] opacity-30 pointer-events-none"></div>
+                    
+                    <h1 className="text-4xl font-calligraphy text-center text-[#5D4037] mb-8 drop-shadow-sm">三国志 · 霸业</h1>
+                    
+                    <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold uppercase tracking-widest text-[#5D4037]">主公尊号</label>
+                            <input className="w-full bg-transparent border-b-2 border-[#8D6E63] p-2 text-[#2c1810] font-bold outline-none focus:border-[#2c1810] transition-colors placeholder-[#a1887f]" placeholder="请输入账号" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold uppercase tracking-widest text-[#5D4037]">口令</label>
+                            <input className="w-full bg-transparent border-b-2 border-[#8D6E63] p-2 text-[#2c1810] font-bold outline-none focus:border-[#2c1810] transition-colors placeholder-[#a1887f]" type="password" placeholder="请输入密码" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+                        </div>
+                        
+                        <div className="pt-4">
+                            <button className="w-full bg-[#8D6E63] hover:bg-[#6D4C41] text-[#f4e4bc] font-bold py-3 rounded shadow-lg active:scale-95 transition-all border-2 border-[#4E342E] text-lg font-serif">
+                                {isReg ? '注册军籍' : '升帐点兵'}
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div className="mt-6 text-center border-t border-[#8D6E63]/30 pt-4 cursor-pointer text-[#5D4037] font-bold hover:text-[#3E2723]" onClick={() => setIsReg(!isReg)}>
+                        {isReg ? '已有军籍？去点兵' : '初来乍到？立军籍'}
+                    </div>
+                </div>
+
+                {/* Scroll Bottom */}
+                <div className="h-12 bg-[#e8e4c9] rounded-b-lg shadow-lg flex items-center justify-center border-t-2 border-[#2c1810] relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/rice-paper.png')] opacity-50"></div>
+                    <div className="w-full h-2 bg-[#2c1810] absolute bottom-2"></div>
                 </div>
             </div>
         </div>
@@ -320,29 +391,38 @@ const Dashboard = () => {
 
     return (
         <div className="space-y-6">
-            <div className="relative h-48 md:h-64 rounded-xl overflow-hidden shadow-2xl border border-stone-600">
-                <img src="https://picsum.photos/seed/city/800/400" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-900 via-transparent to-transparent flex items-end p-6">
-                    <div>
-                        <h2 className="text-2xl md:text-3xl font-bold text-amber-500 drop-shadow-md">洛阳城</h2>
-                        <p className="text-sm md:text-base text-stone-300">天下一统，在此一举。</p>
+            <Panel className="p-0 border-4 border-[#3E2723]">
+                <div className="relative h-48 md:h-64 overflow-hidden">
+                    <img src="https://picsum.photos/seed/city/800/400" className="w-full h-full object-cover opacity-80 hover:scale-105 transition-transform duration-[10s]" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1a1816] via-transparent to-transparent flex items-end p-6">
+                        <div className="border-l-4 border-gold-500 pl-4">
+                            <h2 className="text-4xl font-calligraphy text-gold-300 drop-shadow-lg">洛阳城</h2>
+                            <p className="text-sm text-stone-300 font-serif italic">"天下大势，分久必合，合久必分"</p>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </Panel>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div onClick={handleSignin} className="bg-stone-800 p-4 md:p-6 rounded-lg border border-stone-700 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-stone-700 transition active:scale-95 active:bg-stone-700">
-                    <Scroll size={32} className="text-amber-500" />
-                    <span className="font-bold text-sm md:text-base">每日签到</span>
-                </div>
-                <Link to="/barracks" className="bg-stone-800 p-4 md:p-6 rounded-lg border border-stone-700 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-stone-700 transition active:scale-95 active:bg-stone-700">
-                    <Users size={32} className="text-blue-500" />
-                    <span className="font-bold text-sm md:text-base">整顿军马</span>
-                </Link>
-                <Link to="/gallery" className="bg-stone-800 p-4 md:p-6 rounded-lg border border-stone-700 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-stone-700 transition active:scale-95 active:bg-stone-700">
-                    <BookOpen size={32} className="text-purple-500" />
-                    <span className="font-bold text-sm md:text-base">武将图鉴</span>
-                </Link>
+                {[
+                    { icon: Scroll, label: '每日签到', color: 'text-amber-500', action: handleSignin },
+                    { icon: Users, label: '整顿军马', color: 'text-blue-400', link: '/barracks' },
+                    { icon: BookOpen, label: '武将图鉴', color: 'text-purple-400', link: '/gallery' },
+                    { icon: ShoppingBag, label: '军需仓库', color: 'text-green-400', link: '/inventory' },
+                ].map((item, i) => {
+                    const Content = (
+                        <div className="bg-[#2c2824] p-4 md:p-6 flex flex-col items-center justify-center gap-2 border-2 border-[#3E2723] hover:border-gold-700 transition-all group shadow-lg relative overflow-hidden">
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] opacity-10"></div>
+                            <item.icon size={32} className={`${item.color} drop-shadow-md group-hover:scale-110 transition-transform duration-300`} />
+                            <span className="font-bold text-sm md:text-base text-paper-200 font-serif relative z-10 group-hover:text-gold-100">{item.label}</span>
+                        </div>
+                    );
+                    return item.link ? (
+                        <Link to={item.link} key={i} className="block active:scale-95">{Content}</Link>
+                    ) : (
+                        <div key={i} onClick={item.action} className="cursor-pointer active:scale-95">{Content}</div>
+                    );
+                })}
             </div>
         </div>
     );
@@ -351,7 +431,6 @@ const Dashboard = () => {
 const Gacha = () => {
     const { token, refreshUser, user } = useAuth();
     const [result, setResult] = useState<General[] | null>(null);
-    // Phase: idle -> charging -> flash -> reveal
     const [phase, setPhase] = useState<'idle' | 'charging' | 'flash' | 'reveal'>('idle');
     const toast = useToast();
 
@@ -359,28 +438,17 @@ const Gacha = () => {
 
     const performGacha = async (isTen: boolean) => {
         if (!token || phase !== 'idle') return;
-        
-        // 1. Charging Phase
         setPhase('charging');
         setResult(null);
-
-        // Fetch in background while animating
         const gachaPromise = isTen ? api.gachaTen(token) : api.gacha(token);
-        
-        // Wait for charge animation (2s)
         await wait(2000);
-        
-        // 2. Flash Phase
         setPhase('flash');
-        await wait(250); // Short bright flash
-        
-        // 3. Resolve & Reveal
+        await wait(250);
         const res = await gachaPromise;
         if (res.error) {
             setPhase('idle');
             return toast.show(res.error, 'error');
         }
-        
         setResult(isTen ? res.generals : [res.general]);
         setPhase('reveal');
         refreshUser();
@@ -390,225 +458,98 @@ const Gacha = () => {
 
     return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-160px)] py-4 relative overflow-hidden">
-             {/* Screen Flash Overlay */}
-             {phase === 'flash' && (
-                <div className="fixed inset-0 z-[100] bg-white animate-flash pointer-events-none"></div>
-            )}
+             {phase === 'flash' && <div className="fixed inset-0 z-[100] bg-white animate-flash pointer-events-none"></div>}
 
-             {/* Header Section */}
              <div className={`text-center mb-8 relative z-10 transition-opacity duration-500 ${phase !== 'idle' ? 'opacity-50' : 'opacity-100'}`}>
-                <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-300 animate-pulse drop-shadow-sm flex items-center justify-center gap-2">
-                    <Sparkles className="text-amber-400" /> 聚贤庄 <Sparkles className="text-amber-400" />
+                <h2 className="text-4xl font-calligraphy text-gold-300 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] flex items-center justify-center gap-4">
+                    <div className="w-12 h-[2px] bg-gold-700"></div>
+                    聚贤庄
+                    <div className="w-12 h-[2px] bg-gold-700"></div>
                 </h2>
-                <div className="mt-4 inline-flex items-center gap-3 bg-stone-900/80 px-4 py-1.5 rounded-full border border-stone-700 shadow-inner backdrop-blur-sm">
-                    <span className="text-stone-400 text-xs uppercase tracking-wider font-bold">保底进度</span>
-                    <div className="w-24 h-2 bg-stone-800 rounded-full overflow-hidden border border-stone-700/50">
-                        <div 
-                            className="h-full bg-amber-600 transition-all duration-500 ease-out shadow-[0_0_10px_rgba(245,158,11,0.5)]" 
-                            style={{ width: `${(user?.pity_counter || 0) / 60 * 100}%` }}
-                        ></div>
+                <div className="mt-4 inline-flex items-center gap-3 bg-[#2c1810] px-4 py-2 rounded-full border border-[#5D4037] shadow-inner">
+                    <span className="text-[#8D6E63] text-xs font-bold">保底进度</span>
+                    <div className="w-32 h-3 bg-[#1a1816] rounded-full overflow-hidden border border-[#3E2723]">
+                        <div className="h-full bg-gradient-to-r from-amber-700 to-amber-500" style={{ width: `${(user?.pity_counter || 0) / 60 * 100}%` }}></div>
                     </div>
-                    <span className="text-amber-500 font-mono font-bold text-xs">{user?.pity_counter}/60</span>
+                    <span className="text-gold-500 font-mono font-bold text-xs">{user?.pity_counter}/60</span>
                 </div>
              </div>
 
-             {/* Main Altar Area */}
              {phase === 'reveal' && result ? (
-                 <div className={`w-full max-w-2xl animate-fade-in-up text-center space-y-4 md:space-y-6 bg-stone-800/90 backdrop-blur-md p-4 md:p-8 rounded-xl border-2 shadow-2xl relative overflow-hidden ${hasLegendary ? 'border-amber-400/80 shadow-amber-900/50' : 'border-stone-600'}`}>
-                    {hasLegendary && (
-                        <div className="absolute inset-0 bg-amber-500/10 animate-pulse pointer-events-none"></div>
-                    )}
+                 <Panel className={`w-full max-w-2xl animate-fade-in-up text-center ${hasLegendary ? 'border-gold-500 shadow-gold-700/20' : ''}`}>
                     <div className="relative z-10">
-                        <h3 className={`text-xl md:text-2xl font-bold mb-4 md:mb-6 ${hasLegendary ? 'text-amber-300 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-stone-300'}`}>
-                            {hasLegendary ? '✨ 传说降临! ✨' : '招募完成'}
+                        <h3 className={`text-2xl font-calligraphy mb-6 ${hasLegendary ? 'text-gold-300 animate-pulse' : 'text-paper-200'}`}>
+                            {hasLegendary ? '✨ 天命所归 ✨' : '招募完成'}
                         </h3>
-                        <div className="grid grid-cols-5 gap-1.5 md:grid-cols-5 md:gap-4 overflow-hidden">
+                        <div className="grid grid-cols-5 gap-2 md:gap-4">
                             {result.map((g, i) => {
                                  const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
                                  const isFiveStar = g.stars === 5;
                                  return (
-                                    <div key={i} style={{ animationDelay: `${i * 100}ms` }} className={`animate-card-appear flex flex-col items-center p-0.5 md:p-2 bg-stone-900 rounded border ${style.border} relative overflow-hidden group transform transition-all duration-300 ${isFiveStar ? 'shadow-[0_0_15px_rgba(251,191,36,0.6)] z-10 scale-105' : ''}`}>
-                                        <div className={`absolute inset-0 opacity-10 ${style.bg}`}></div>
-                                        {isFiveStar && <div className="absolute inset-0 bg-gradient-to-t from-amber-500/30 to-transparent animate-pulse"></div>}
-                                        {g.converted && <div className="absolute top-0 right-0 bg-blue-600/90 text-white text-[8px] px-1 rounded-bl z-20 font-bold">碎片 x10</div>}
-                                        <div className="relative w-full aspect-[2/3] overflow-hidden rounded-[2px] border border-stone-800">
+                                    <div key={i} style={{ animationDelay: `${i * 100}ms` }} className={`animate-card-appear flex flex-col items-center p-1 bg-[#1a1816] border-2 ${style.border} relative overflow-hidden group shadow-lg`}>
+                                        {isFiveStar && <div className="absolute inset-0 bg-gold-500/10 animate-pulse pointer-events-none"></div>}
+                                        {g.converted && <div className="absolute top-0 right-0 bg-blue-900/90 text-blue-100 text-[8px] px-1 z-20 font-bold border-l border-b border-blue-700">碎片x10</div>}
+                                        <div className="relative w-full aspect-[2/3] overflow-hidden border border-[#2c1810]">
                                             <img src={g.avatar} className="w-full h-full object-cover" />
                                         </div>
-                                        <div className={`text-[8px] md:text-sm font-bold mt-0.5 md:mt-2 ${style.text} truncate w-full text-center leading-none`}>{g.name}</div>
-                                        <div className="flex items-center justify-center gap-px mt-0.5">
-                                            {Array.from({length: g.stars}).map((_, si) => (
-                                                <Star key={si} size={isFiveStar ? 6 : 5} className={`${isFiveStar ? 'text-amber-400 fill-amber-400' : 'text-stone-600 fill-stone-600'}`} />
-                                            ))}
-                                        </div>
+                                        <div className={`text-[9px] md:text-sm font-bold mt-1 ${style.text} truncate w-full text-center font-serif`}>{g.name}</div>
+                                        <div className="flex gap-px mt-0.5">{Array.from({length: g.stars}).map((_, si) => <Star key={si} size={8} className={isFiveStar ? 'fill-gold-500 text-gold-500' : 'fill-stone-600 text-stone-600'} />)}</div>
                                     </div>
                                  );
                             })}
                         </div>
-                        <button onClick={() => { setPhase('idle'); setResult(null); }} className="mt-6 md:mt-8 px-8 py-3 bg-stone-700 rounded-full hover:bg-stone-600 text-white font-bold w-full md:w-auto border border-stone-500 active:scale-95 transition text-sm md:text-base">
-                            继续招募
-                        </button>
-                    </div>
-                </div>
-             ) : (
-                 // Altar View
-                 <div className="relative w-72 h-72 md:w-80 md:h-80 flex items-center justify-center transition-all duration-500">
-                    {/* Background Layers */}
-                    <div className="absolute inset-0 bg-stone-900/40 rounded-full blur-3xl"></div>
-                    
-                    {/* Magic Circles */}
-                    {/* Outer Rotating Ring */}
-                    <div className={`absolute inset-0 border-[3px] border-dashed border-stone-700/30 rounded-full ${phase === 'charging' ? 'animate-spin-slow duration-[3s]' : 'animate-spin-slow'}`}></div>
-                    
-                    {/* Middle Ring with Runes */}
-                    <div className={`absolute inset-4 border border-stone-600/50 rounded-full flex items-center justify-center ${phase === 'charging' ? 'animate-spin duration-[3s]' : 'rotate-45 transition-transform duration-[20s]'}`}>
-                        <div className="absolute top-0 w-3 h-3 bg-stone-800 border border-stone-600 rounded-full transform -translate-y-1/2"></div>
-                        <div className="absolute bottom-0 w-3 h-3 bg-stone-800 border border-stone-600 rounded-full transform translate-y-1/2"></div>
-                        <div className="absolute left-0 w-3 h-3 bg-stone-800 border border-stone-600 rounded-full transform -translate-x-1/2"></div>
-                        <div className="absolute right-0 w-3 h-3 bg-stone-800 border border-stone-600 rounded-full transform translate-x-1/2"></div>
-                    </div>
-
-                    {/* Core Altar */}
-                    <div className={`relative z-10 w-40 h-40 bg-gradient-to-b from-stone-800 to-stone-900 rounded-full border-4 border-stone-700 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex items-center justify-center transition-all duration-500
-                        ${phase === 'charging' ? 'scale-110 border-amber-500 shadow-[0_0_50px_rgba(245,158,11,0.5)] animate-shake-hard' : ''}
-                    `}>
-                        {phase === 'charging' ? (
-                            <Compass size={64} className="text-amber-400 animate-spin duration-1000" />
-                        ) : (
-                            <div className="text-stone-600 relative">
-                                <Box size={56} strokeWidth={1.5} />
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <Star size={24} className="text-stone-700 fill-stone-700" />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Charging Particles */}
-                    {phase === 'charging' && (
-                        <div className="absolute inset-0 z-0">
-                            <div className="absolute top-1/2 left-1/2 w-full h-1 bg-amber-500/20 -translate-x-1/2 -translate-y-1/2 blur-sm animate-pulse"></div>
-                            <div className="absolute top-1/2 left-1/2 w-1 h-full bg-amber-500/20 -translate-x-1/2 -translate-y-1/2 blur-sm animate-pulse"></div>
+                        <div className="mt-8 flex justify-center">
+                            <Button onClick={() => { setPhase('idle'); setResult(null); }} variant="secondary">继续招募</Button>
                         </div>
-                    )}
+                    </div>
+                </Panel>
+             ) : (
+                 <div className="relative w-72 h-72 md:w-80 md:h-80 flex items-center justify-center transition-all duration-500">
+                    <div className="absolute inset-0 bg-gold-700/5 rounded-full blur-3xl animate-pulse"></div>
+                    <div className={`absolute inset-0 border-[1px] border-dashed border-gold-700/30 rounded-full ${phase === 'charging' ? 'animate-spin-slow duration-[3s]' : 'animate-spin-slow'}`}></div>
+                    <div className={`absolute inset-8 border border-[#5D4037] rounded-full flex items-center justify-center bg-[#1a1816]/80 ${phase === 'charging' ? 'animate-spin duration-[3s]' : 'rotate-45'}`}>
+                        <div className="w-48 h-48 border-2 border-gold-900/30 rotate-45"></div>
+                    </div>
+                    <div className={`relative z-10 w-32 h-32 bg-gradient-to-b from-[#3E2723] to-[#1a1816] rounded-full border-4 border-[#5D4037] shadow-2xl flex items-center justify-center transition-all duration-500 ${phase === 'charging' ? 'scale-110 border-gold-500 shadow-gold-500/30 animate-shake-hard' : ''}`}>
+                        {phase === 'charging' ? <Compass size={48} className="text-gold-500 animate-spin" /> : <div className="text-[#5D4037] font-calligraphy text-4xl">招</div>}
+                    </div>
                  </div>
              )}
 
-             {/* Controls */}
              {phase === 'idle' && (
                  <div className="mt-12 grid grid-cols-2 gap-6 w-full max-w-sm px-6">
-                    {/* Single Pull Button */}
-                    <button 
-                        onClick={() => performGacha(false)}
-                        className="group relative bg-stone-800 hover:bg-stone-700 border border-stone-600 hover:border-red-500/50 rounded-xl p-1 transition-all duration-300 shadow-lg active:scale-95"
-                    >
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-stone-900 text-stone-400 text-[10px] px-2 py-0.5 rounded-full border border-stone-700 whitespace-nowrap group-hover:text-red-400 transition-colors shadow-sm">
-                            1 招募令
-                        </div>
-                        <div className="h-full w-full bg-gradient-to-b from-stone-800 to-stone-900 rounded-lg py-3 flex flex-col items-center justify-center gap-1 group-hover:from-red-900/20 group-hover:to-stone-900 transition-all">
-                            <span className="text-stone-200 font-bold text-lg group-hover:text-red-100 flex items-center gap-2"><Gift size={16} /> 单次招募</span>
-                            <span className="text-[10px] text-stone-500 group-hover:text-red-300/70">普通概率</span>
-                        </div>
-                    </button>
-
-                    {/* Ten Pull Button */}
-                    <button 
-                        onClick={() => performGacha(true)}
-                        className="group relative bg-stone-800 hover:bg-stone-700 border border-stone-600 hover:border-amber-500/50 rounded-xl p-1 transition-all duration-300 shadow-lg active:scale-95"
-                    >
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-stone-900 text-stone-400 text-[10px] px-2 py-0.5 rounded-full border border-stone-700 whitespace-nowrap group-hover:text-amber-400 transition-colors shadow-sm">
-                            10 招募令
-                        </div>
-                        <div className="h-full w-full bg-gradient-to-b from-stone-800 to-stone-900 rounded-lg py-3 flex flex-col items-center justify-center gap-1 group-hover:from-amber-900/20 group-hover:to-stone-900 transition-all">
-                            <span className="text-amber-400 font-bold text-lg group-hover:text-amber-100 flex items-center gap-2"><Sparkles size={16} /> 十连招募</span>
-                            <span className="text-[10px] text-amber-600/70 group-hover:text-amber-400/70">必出3星+</span>
-                        </div>
-                    </button>
+                    <Button onClick={() => performGacha(false)} variant="secondary" className="h-16 flex-col gap-0">
+                        <span className="text-lg">单次招募</span>
+                        <span className="text-[10px] opacity-70 font-normal">消耗 1 令</span>
+                    </Button>
+                    <Button onClick={() => performGacha(true)} variant="primary" className="h-16 flex-col gap-0">
+                        <span className="text-lg text-gold-100">十连招募</span>
+                        <span className="text-[10px] text-gold-300/80 font-normal">消耗 10 令</span>
+                    </Button>
                  </div>
-             )}
-
-             {/* Status Text */}
-             {phase === 'charging' && (
-                <div className="absolute bottom-20 text-amber-500 font-bold tracking-[0.5em] text-sm animate-pulse drop-shadow-[0_0_10px_rgba(245,158,11,0.8)]">
-                    天命召唤中...
-                </div>
              )}
         </div>
     );
 };
 
-// --- Helper: Calculate Total Power ---
+// --- Helper: Power Calc ---
 const calculatePower = (g: UserGeneral) => {
     const baseAttr = g.str + g.int + g.ldr;
-    // 10% bonus per evolution level
     const evolutionBonus = 1 + (g.evolution || 0) * 0.1;
     const basePower = baseAttr * g.level * evolutionBonus;
-    
-    // Sum equipment stats
     const equipPower = g.equipments ? g.equipments.reduce((acc, e) => acc + e.stat_bonus, 0) : 0;
-    
     return Math.floor(basePower + equipPower);
 };
 
-// --- Bond Logic Definitions ---
-interface BondDef {
-    name: string;
-    desc: string;
-    boost: string;
-    condition: (names: string[], countries: string[]) => boolean;
-    generals?: string[];
-    country?: string;
-}
-
-const BONDS: BondDef[] = [
-    { 
-        name: '桃园结义', 
-        desc: '刘备、关羽、张飞同时上阵', 
-        boost: '战力+20%', 
-        generals: ['刘备', '关羽', '张飞'],
-        condition: (names) => ['刘备', '关羽', '张飞'].every(n => names.includes(n)) 
-    },
-    { 
-        name: '五虎上将', 
-        desc: '关羽/张飞/赵云/马超/黄忠 (≥3人)', 
-        boost: '战力+15%', 
-        generals: ['关羽', '张飞', '赵云', '马超', '黄忠'],
-        condition: (names) => ['关羽', '张飞', '赵云', '马超', '黄忠'].filter(n => names.includes(n)).length >= 3 
-    },
-    { 
-        name: '五子良将', 
-        desc: '张辽/张郃/徐晃/于禁/乐进 (≥3人)', 
-        boost: '战力+15%', 
-        generals: ['张辽', '张郃', '徐晃', '于禁', '乐进'],
-        condition: (names) => ['张辽', '张郃', '徐晃', '于禁', '乐进'].filter(n => names.includes(n)).length >= 3 
-    },
-    { 
-        name: '魏国精锐', 
-        desc: '魏国武将 ≥ 3人', 
-        boost: '战力+10%', 
-        country: '魏',
-        condition: (_, countries) => countries.filter(c => c === '魏').length >= 3 
-    },
-    { 
-        name: '蜀汉英杰', 
-        desc: '蜀国武将 ≥ 3人', 
-        boost: '战力+10%', 
-        country: '蜀',
-        condition: (_, countries) => countries.filter(c => c === '蜀').length >= 3 
-    },
-    { 
-        name: '江东虎臣', 
-        desc: '吴国武将 ≥ 3人', 
-        boost: '战力+10%', 
-        country: '吴',
-        condition: (_, countries) => countries.filter(c => c === '吴').length >= 3 
-    },
-    { 
-        name: '群雄割据', 
-        desc: '群雄武将 ≥ 3人', 
-        boost: '战力+10%', 
-        country: '群',
-        condition: (_, countries) => countries.filter(c => c === '群').length >= 3 
-    },
+// --- Bond Logic ---
+const BONDS = [
+    { name: '桃园结义', desc: '刘备、关羽、张飞', boost: '战力+20%', generals: ['刘备', '关羽', '张飞'], condition: (names: string[]) => ['刘备', '关羽', '张飞'].every(n => names.includes(n)) },
+    { name: '五虎上将', desc: '五虎将 ≥ 3人', boost: '战力+15%', generals: ['关羽', '张飞', '赵云', '马超', '黄忠'], condition: (names: string[]) => ['关羽', '张飞', '赵云', '马超', '黄忠'].filter(n => names.includes(n)).length >= 3 },
+    { name: '五子良将', desc: '五子良将 ≥ 3人', boost: '战力+15%', generals: ['张辽', '张郃', '徐晃', '于禁', '乐进'], condition: (names: string[]) => ['张辽', '张郃', '徐晃', '于禁', '乐进'].filter(n => names.includes(n)).length >= 3 },
+    { name: '魏国精锐', desc: '魏国 ≥ 3人', boost: '战力+10%', country: '魏', condition: (_: any, countries: string[]) => countries.filter(c => c === '魏').length >= 3 },
+    { name: '蜀汉英杰', desc: '蜀国 ≥ 3人', boost: '战力+10%', country: '蜀', condition: (_: any, countries: string[]) => countries.filter(c => c === '蜀').length >= 3 },
+    { name: '江东虎臣', desc: '吴国 ≥ 3人', boost: '战力+10%', country: '吴', condition: (_: any, countries: string[]) => countries.filter(c => c === '吴').length >= 3 },
+    { name: '群雄割据', desc: '群雄 ≥ 3人', boost: '战力+10%', country: '群', condition: (_: any, countries: string[]) => countries.filter(c => c === '群').length >= 3 },
 ];
 
 const getActiveBonds = (team: UserGeneral[]) => {
@@ -625,97 +566,67 @@ const getGeneralBonds = (g: General) => {
     });
 };
 
-// --- Inventory View ---
+// --- Inventory ---
 const Inventory = () => {
     const { token } = useAuth();
     const [items, setItems] = useState<any[]>([]);
-    const [filter, setFilter] = useState('all'); // all, weapon, armor, treasure
+    const [filter, setFilter] = useState('all');
 
     useEffect(() => {
-        if(token) {
-            api.getUserItems(token).then(data => {
-                if(Array.isArray(data)) setItems(data);
-            });
-        }
+        if(token) api.getUserItems(token).then(data => { if(Array.isArray(data)) setItems(data); });
     }, [token]);
 
     const filteredItems = filter === 'all' ? items : items.filter(i => i.type === filter);
 
     return (
         <div className="space-y-4">
-            <h2 className="text-xl font-bold border-l-4 border-blue-500 pl-3 flex items-center gap-2">
-                <ShoppingBag size={24}/> 仓库物资
-            </h2>
+            <div className="bg-[#2c1810] text-paper-200 p-3 border-b-2 border-gold-700 flex justify-between items-center font-calligraphy text-xl">
+                <span><ShoppingBag className="inline mr-2"/>军需仓库</span>
+            </div>
 
-            {/* Filters */}
-            <div className="flex gap-2 bg-stone-800 p-1 rounded-lg border border-stone-700">
+            <div className="flex gap-2 p-1 bg-[#1a1816] border border-[#3E2723]">
                 {['all', 'weapon', 'armor', 'treasure'].map(t => (
-                    <button
-                        key={t}
-                        onClick={() => setFilter(t)}
-                        className={`flex-1 py-1.5 text-xs md:text-sm font-bold rounded capitalize transition-colors ${filter === t ? 'bg-stone-600 text-white shadow' : 'text-stone-400 hover:text-stone-300'}`}
-                    >
-                        {t === 'all' ? '全部' : t === 'weapon' ? '武器' : t === 'armor' ? '防具' : '宝物'}
+                    <button key={t} onClick={() => setFilter(t)} className={`flex-1 py-2 text-xs font-bold font-serif transition-colors border border-transparent ${filter === t ? 'bg-[#3E2723] text-gold-300 border-[#5D4037]' : 'text-stone-500 hover:text-stone-300'}`}>
+                        {t === 'all' ? '全部' : t === 'weapon' ? '兵刃' : t === 'armor' ? '防具' : '宝物'}
                     </button>
                 ))}
             </div>
 
-            {/* Item Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {filteredItems.map(item => {
                     const style = STAR_STYLES[item.stars] || STAR_STYLES[1];
                     return (
-                        <div key={item.id} className="bg-stone-800 rounded-lg p-3 border border-stone-700 flex gap-3 shadow-md relative overflow-hidden">
-                            {/* Icon */}
-                            <div className={`w-16 h-16 shrink-0 rounded border-2 ${style.border} bg-stone-900 flex items-center justify-center relative`}>
-                                <div className={`absolute inset-0 opacity-10 ${style.bg}`}></div>
+                        <div key={item.id} className="bg-[#2c2824] p-3 border-2 border-[#3E2723] flex gap-3 relative shadow-lg">
+                            <div className={`w-16 h-16 shrink-0 border-2 ${style.border} bg-[#1a1816] flex items-center justify-center`}>
                                 {item.type === 'weapon' && <Sword size={24} className={style.text} />}
                                 {item.type === 'armor' && <Shield size={24} className={style.text} />}
                                 {item.type === 'treasure' && <Box size={24} className={style.text} />}
                             </div>
-
-                            {/* Details */}
-                            <div className="flex-1 flex flex-col justify-between">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <div className={`font-bold text-sm ${style.text}`}>{item.name}</div>
-                                        <div className="text-xs text-stone-500 uppercase">{item.type === 'weapon' ? '武器' : item.type === 'armor' ? '防具' : '宝物'}</div>
-                                    </div>
-                                    <div className="text-xs font-bold bg-stone-900 px-1.5 py-0.5 rounded text-stone-400">
-                                        {item.stars}★
-                                    </div>
+                            <div className="flex-1">
+                                <div className="flex justify-between">
+                                    <div className={`font-bold font-serif ${style.text}`}>{item.name}</div>
+                                    <div className="text-xs bg-[#1a1816] px-1 text-stone-400 border border-stone-700">{item.stars}★</div>
                                 </div>
-                                <div className="flex justify-between items-end mt-2">
-                                    <div className="text-xs text-stone-300 bg-stone-900/50 px-2 py-1 rounded">
-                                        加成 <span className="text-amber-500 font-mono">+{item.stat_bonus}</span>
-                                    </div>
-                                    {item.equipped_by && (
-                                        <div className="text-[10px] px-2 py-0.5 rounded bg-blue-900/30 text-blue-300 border border-blue-800 flex items-center gap-1">
-                                            <Users size={10}/> {item.equipped_by}
-                                        </div>
-                                    )}
+                                <div className="mt-2 flex justify-between items-end">
+                                    <div className="text-xs text-stone-400">加成 <span className="text-gold-500">+{item.stat_bonus}</span></div>
+                                    {item.equipped_by && <div className="text-[10px] text-blue-400 bg-blue-900/20 px-2 py-0.5 border border-blue-800">已装备: {item.equipped_by}</div>}
                                 </div>
                             </div>
                         </div>
                     );
                 })}
-                {filteredItems.length === 0 && (
-                    <div className="col-span-full text-center py-10 text-stone-500 text-sm italic">
-                        暂无此类物品
-                    </div>
-                )}
             </div>
         </div>
     );
 };
 
-// --- Gallery View ---
+// --- Gallery ---
 const Gallery = () => {
     const { token } = useAuth();
     const [meta, setMeta] = useState<{ generals: General[], equipments: Equipment[] }>({ generals: [], equipments: [] });
     const [collection, setCollection] = useState<{ generalIds: number[], equipmentIds: number[], assignments?: Record<number, string[]> }>({ generalIds: [], equipmentIds: [] });
     const [tab, setTab] = useState<'generals' | 'equipments'>('generals');
-    const [filter, setFilter] = useState('全部'); // For generals
+    const [filter, setFilter] = useState('全部');
     
     useEffect(() => {
         if(token) {
@@ -725,158 +636,66 @@ const Gallery = () => {
     }, [token]);
 
     const filteredGenerals = filter === '全部' ? meta.generals : meta.generals.filter(g => g.country === filter);
-
-    const getProb = (stars: number) => {
-        if (stars === 5) return '2%';
-        if (stars === 4) return '10%';
-        return '88%';
-    };
-
-    const isOwned = (id: number, type: 'general' | 'equip') => {
-        if (type === 'general') return collection.generalIds.includes(id);
-        return collection.equipmentIds.includes(id);
-    };
-
-    const ownedCount = tab === 'generals' ? collection.generalIds.length : collection.equipmentIds.length;
-    const totalCount = tab === 'generals' ? meta.generals.length : meta.equipments.length;
+    const isOwned = (id: number, type: 'general' | 'equip') => type === 'general' ? collection.generalIds.includes(id) : collection.equipmentIds.includes(id);
 
     return (
         <div className="space-y-4">
-            <h2 className="text-xl font-bold border-l-4 border-purple-500 pl-3 flex items-center justify-between">
-                <div className="flex items-center gap-2"><BookOpen size={24}/> 图鉴</div>
-                <div className="text-sm font-normal text-stone-400">
-                    收集进度: <span className="text-amber-500 font-bold">{ownedCount}</span> / {totalCount}
-                </div>
-            </h2>
+            <div className="bg-[#2c1810] text-paper-200 p-3 border-b-2 border-gold-700 flex justify-between items-center font-calligraphy text-xl">
+                <span><BookOpen className="inline mr-2"/>图鉴</span>
+                <span className="text-sm font-sans text-stone-400">收集: <span className="text-gold-500">{tab==='generals'?collection.generalIds.length:collection.equipmentIds.length}</span> / {tab==='generals'?meta.generals.length:meta.equipments.length}</span>
+            </div>
             
-            {/* Tabs */}
-            <div className="flex bg-stone-800 rounded-lg p-1 border border-stone-700">
-                <button 
-                    onClick={() => setTab('generals')}
-                    className={`flex-1 py-2 text-sm font-bold rounded-md transition-colors ${tab === 'generals' ? 'bg-stone-700 text-white shadow' : 'text-stone-400 hover:text-stone-200'}`}
-                >
-                    武将
-                </button>
-                <button 
-                    onClick={() => setTab('equipments')}
-                    className={`flex-1 py-2 text-sm font-bold rounded-md transition-colors ${tab === 'equipments' ? 'bg-stone-700 text-white shadow' : 'text-stone-400 hover:text-stone-200'}`}
-                >
-                    装备
-                </button>
+            <div className="flex border-b-2 border-[#3E2723]">
+                <button onClick={() => setTab('generals')} className={`flex-1 py-2 font-bold font-serif ${tab === 'generals' ? 'bg-[#3E2723] text-gold-300' : 'text-stone-500 hover:bg-[#2c1810]'}`}>名将录</button>
+                <button onClick={() => setTab('equipments')} className={`flex-1 py-2 font-bold font-serif ${tab === 'equipments' ? 'bg-[#3E2723] text-gold-300' : 'text-stone-500 hover:bg-[#2c1810]'}`}>神兵谱</button>
             </div>
 
-            {/* General Filters */}
             {tab === 'generals' && (
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                     {['全部', '魏', '蜀', '吴', '群'].map(c => (
-                        <button 
-                            key={c}
-                            onClick={() => setFilter(c)}
-                            className={`px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${filter === c ? 'bg-amber-600 text-white' : 'bg-stone-800 text-stone-400 hover:bg-stone-700'}`}
-                        >
-                            {c}
-                        </button>
+                        <button key={c} onClick={() => setFilter(c)} className={`px-4 py-1 border ${filter === c ? 'bg-red-900 border-red-700 text-paper-100' : 'bg-[#1a1816] border-[#3E2723] text-stone-500'} font-serif font-bold text-sm min-w-[60px]`}>{c}</button>
                     ))}
                 </div>
             )}
 
-            {/* Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* GENERALS GRID */}
                 {tab === 'generals' && filteredGenerals.map(g => {
                     const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
-                    const bonds = getGeneralBonds(g);
                     const owned = isOwned(g.id, 'general');
-
                     return (
-                        <div key={g.id} className={`bg-stone-800 rounded-lg p-3 border flex gap-4 shadow-lg transition-all ${owned ? 'border-stone-700' : 'border-stone-800 opacity-60 grayscale'}`}>
-                            {/* Avatar */}
-                            <div className="relative w-20 h-28 shrink-0">
-                                <img src={g.avatar} className={`w-full h-full object-cover rounded border-2 ${style.border}`} />
-                                <div className={`absolute -top-1 -left-1 px-1.5 py-0.5 text-[10px] font-bold text-white rounded-full ${COUNTRY_COLORS[g.country]}`}>
-                                    {g.country}
-                                </div>
-                                {!owned && <div className="absolute inset-0 bg-black/50 flex items-center justify-center font-bold text-xs text-white">未获取</div>}
+                        <div key={g.id} className={`bg-[#2c2824] p-2 border border-[#3E2723] flex gap-3 relative ${!owned ? 'opacity-50 grayscale' : ''}`}>
+                            <div className="relative w-20 h-24 shrink-0 border-2 border-[#1a1816]">
+                                <img src={g.avatar} className="w-full h-full object-cover" />
+                                <div className={`absolute top-0 left-0 text-[10px] text-white px-1 font-bold ${COUNTRY_COLORS[g.country]}`}>{g.country}</div>
                             </div>
-
-                            {/* Info */}
-                            <div className="flex-1 flex flex-col justify-between">
-                                <div>
-                                    <div className="flex justify-between items-start">
-                                        <div className={`font-bold ${style.text}`}>{g.name}</div>
-                                        <div className="text-xs font-bold bg-stone-900 px-1.5 py-0.5 rounded text-stone-400">
-                                            {g.stars}★
-                                        </div>
-                                    </div>
-                                    <div className="text-[10px] text-stone-500 line-clamp-2 mt-1 italic">{g.description}</div>
+                            <div className="flex-1 flex flex-col justify-between py-1">
+                                <div className="flex justify-between">
+                                    <div className={`font-bold font-serif ${style.text}`}>{g.name}</div>
+                                    <div className="text-stone-500 text-xs">{g.stars}★</div>
                                 </div>
-                                
-                                <div className="grid grid-cols-3 gap-1 text-[10px] font-mono my-2 text-stone-300 bg-stone-900/50 p-1 rounded">
-                                    <div title="武力">武:{g.str}</div>
-                                    <div title="智力">智:{g.int}</div>
-                                    <div title="统率">统:{g.ldr}</div>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-1 text-[10px] text-stone-400">
-                                        <Gift size={10} className="text-stone-500" />
-                                        <span>获取: <span className="text-amber-500 font-bold">聚贤庄</span> ({getProb(g.stars)})</span>
-                                    </div>
-                                    
-                                    {/* Bonds Mini View */}
-                                    <div className="flex flex-wrap gap-1">
-                                        {bonds.map(b => (
-                                            <span key={b.name} className="px-1.5 py-0.5 bg-blue-900/30 text-blue-300 text-[9px] rounded border border-blue-900/50">
-                                                {b.name}
-                                            </span>
-                                        ))}
-                                    </div>
+                                <div className="text-[10px] text-stone-400 line-clamp-2 italic">"{g.description}"</div>
+                                <div className="flex gap-1 mt-1 flex-wrap">
+                                    {getGeneralBonds(g).map(b => <span key={b.name} className="text-[9px] border border-stone-600 px-1 text-stone-300">{b.name}</span>)}
                                 </div>
                             </div>
                         </div>
                     );
                 })}
-
-                {/* EQUIPMENTS GRID */}
                 {tab === 'equipments' && meta.equipments.map(e => {
                     const style = STAR_STYLES[e.stars] || STAR_STYLES[1];
                     const owned = isOwned(e.id, 'equip');
-                    const assignedTo = collection.assignments && collection.assignments[e.id];
-
+                    const assigned = collection.assignments?.[e.id];
                     return (
-                        <div key={e.id} className={`bg-stone-800 rounded-lg p-3 border flex gap-4 shadow-lg transition-all ${owned ? 'border-stone-700' : 'border-stone-800 opacity-60 grayscale'}`}>
-                            {/* Icon */}
-                            <div className={`w-20 h-20 shrink-0 rounded border-2 ${style.border} bg-stone-900 flex items-center justify-center relative overflow-hidden`}>
-                                <div className={`absolute inset-0 opacity-10 ${style.bg}`}></div>
-                                {e.type === 'weapon' && <Sword size={32} className={style.text} />}
-                                {e.type === 'armor' && <Shield size={32} className={style.text} />}
-                                {e.type === 'treasure' && <Box size={32} className={style.text} />}
-                                {!owned && <div className="absolute inset-0 bg-black/50 flex items-center justify-center font-bold text-xs text-white">未获取</div>}
+                        <div key={e.id} className={`bg-[#2c2824] p-2 border border-[#3E2723] flex gap-3 relative ${!owned ? 'opacity-50 grayscale' : ''}`}>
+                            <div className={`w-16 h-16 shrink-0 border-2 ${style.border} bg-[#1a1816] flex items-center justify-center`}>
+                                {e.type === 'weapon' && <Sword size={24} className={style.text} />}
+                                {e.type === 'armor' && <Shield size={24} className={style.text} />}
+                                {e.type === 'treasure' && <Box size={24} className={style.text} />}
                             </div>
-
-                            {/* Info */}
-                            <div className="flex-1 flex flex-col justify-between py-1">
-                                <div>
-                                    <div className="flex justify-between items-start">
-                                        <div className={`font-bold ${style.text}`}>{e.name}</div>
-                                        <div className="text-xs font-bold bg-stone-900 px-1.5 py-0.5 rounded text-stone-400">
-                                            {e.stars}★
-                                        </div>
-                                    </div>
-                                    <div className="text-xs text-stone-500 mt-1 uppercase tracking-wider">{e.type === 'weapon' ? '武器' : e.type === 'armor' ? '防具' : '宝物'}</div>
-                                </div>
-
-                                <div className="mt-2 bg-stone-900/50 p-2 rounded text-xs text-stone-300 flex justify-between items-center">
-                                    <span>主属性加成</span>
-                                    <span className="font-mono text-amber-500 font-bold">+{e.stat_bonus}</span>
-                                </div>
-                                
-                                {assignedTo && assignedTo.length > 0 && (
-                                    <div className="mt-1 text-[10px] text-stone-400 flex items-start gap-1">
-                                        <Users size={10} className="mt-0.5 text-blue-400" />
-                                        <span className="line-clamp-1">当前装备: <span className="text-blue-300">{assignedTo.join(', ')}</span></span>
-                                    </div>
-                                )}
+                            <div className="flex-1">
+                                <div className={`font-bold font-serif ${style.text}`}>{e.name}</div>
+                                <div className="text-xs text-gold-600 font-mono">+{e.stat_bonus}</div>
+                                {assigned && <div className="text-[10px] text-stone-400 mt-1">装备于: {assigned.join(', ')}</div>}
                             </div>
                         </div>
                     );
@@ -886,285 +705,109 @@ const Gallery = () => {
     );
 };
 
-// --- New Barracks View (Koei Style) ---
+// --- Barracks ---
 const Barracks = () => {
     const { token } = useAuth();
     const [generals, setGenerals] = useState<UserGeneral[]>([]);
     const toast = useToast();
 
-    const load = () => {
-        if (token) api.getMyGenerals(token).then(setGenerals);
-    };
-
-    useEffect(() => {
-        load();
-    }, [token]);
+    const load = () => { if(token) api.getMyGenerals(token).then(setGenerals); };
+    useEffect(() => { load(); }, [token]);
 
     const toggle = async (uid: number, isIn: boolean) => {
         if(!token) return;
-        
-        // Client-side pre-check for better UX
         if (!isIn) {
             const currentTeam = generals.filter(g => g.is_in_team);
             if (currentTeam.length >= 5) return toast.show('部队已满 (5人)', 'error');
-            
             const target = generals.find(g => g.uid === uid);
             if (target && currentTeam.some(g => g.id === target.id)) return toast.show('同名武将不可重复上阵', 'error');
         }
-
         const res = await api.toggleTeam(token, uid, isIn ? 'remove' : 'add');
-        if (res.error) {
-            toast.show(res.error, 'error');
-        } else {
-            load();
+        if (res.error) toast.show(res.error, 'error');
+        else load();
+    };
+
+    const autoTeam = async () => { if(token) { await api.autoTeam(token); toast.show('部队已整编', 'success'); load(); } };
+    const handleEquip = async (uid: number) => { if(token) { await api.autoEquip(token, uid); toast.show('装备已穿戴', 'success'); load(); } };
+    const handleUnequip = async (uid: number) => { if(token) { await api.unequipAll(token, uid); toast.show('装备已卸下', 'info'); load(); } };
+    
+    const handleEvolve = async (targetUid: number) => {
+        if(token) {
+            const res = await api.evolve(token, targetUid);
+            if (res.error) toast.show(res.error, 'error');
+            else { toast.show('进阶成功', 'success'); load(); }
         }
     };
 
-    const autoTeam = async () => {
-        if(!token) return;
-        await api.autoTeam(token);
-        toast.show('部队已自动编制 (已过滤重复武将)', 'success');
-        load();
-    };
-
-    const handleEquip = async (uid: number) => {
-        if(!token) return;
-        await api.autoEquip(token, uid);
-        toast.show('已自动穿戴最佳装备', 'success');
-        load();
-    };
-
-    const handleUnequip = async (uid: number) => {
-        if(!token) return;
-        await api.unequipAll(token, uid);
-        toast.show('已卸下所有装备', 'info');
-        load();
-    };
-
-    const handleEvolve = async (targetUid: number) => {
-        if(!token) return;
-        
-        // No longer need to find duplicate instances
-        // API handles shard consumption
-        
-        const res = await api.evolve(token, targetUid);
-        if (res.error) return toast.show(res.error, 'error');
-        
-        toast.show('武将进阶成功！战力大幅提升！', 'success');
-        load();
-    };
-
-    // Sort Team by Power (Descending)
-    const team = generals
-        .filter(g => g.is_in_team)
-        .sort((a, b) => calculatePower(b) - calculatePower(a));
-
-    // Calculate Active Bonds
+    const team = generals.filter(g => g.is_in_team).sort((a, b) => calculatePower(b) - calculatePower(a));
     const activeBonds = getActiveBonds(team);
-    
-    // Sort Roster: 1. In Team (top) -> 2. Stars (desc) -> 3. Power (desc)
     const sortedGenerals = [...generals].sort((a, b) => {
-        // Priority 1: Is in team?
-        if (a.is_in_team && !b.is_in_team) return -1;
-        if (!a.is_in_team && b.is_in_team) return 1;
-        
-        // Priority 2: Stars
+        if (a.is_in_team !== b.is_in_team) return a.is_in_team ? -1 : 1;
         if (b.stars !== a.stars) return b.stars - a.stars;
-        
-        // Priority 3: Power
         return calculatePower(b) - calculatePower(a);
     });
-
     const isTeamFull = team.length >= 5;
 
     return (
-        <div className="space-y-4 md:space-y-6">
-            {/* 1. Header & Auto Team */}
-            <div className="flex justify-between items-center border-l-4 border-amber-600 pl-4 bg-stone-800/50 p-2 rounded-r">
-                <h2 className="text-lg md:text-xl font-bold text-amber-100">出征部队</h2>
-                <button onClick={autoTeam} className="bg-amber-700 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded shadow flex items-center gap-1 transition active:bg-amber-800">
-                    <Users size={14}/> 一键编制
-                </button>
-            </div>
-
-            {/* 2. Team View (Row) */}
-            <div className="bg-stone-900 border border-stone-700 p-3 md:p-4 rounded-lg shadow-inner overflow-x-auto scrollbar-hide">
-                <div className="flex gap-3 md:gap-4 min-w-max">
-                    {team.length === 0 ? (
-                        <div className="text-stone-500 text-sm italic w-full text-center py-4">暂无武将出战，请在下方列表选择上阵</div>
-                    ) : (
-                        team.map(g => {
-                            const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
-                            return (
-                                <div key={g.uid} className={`relative w-16 md:w-24 h-24 md:h-40 bg-stone-800 rounded border-2 ${style.border} flex flex-col ${style.shadow} shrink-0 overflow-hidden`}>
-                                    <div className="h-full overflow-hidden relative">
-                                        <div className={`absolute inset-0 opacity-20 ${style.bg}`}></div>
-                                        <img src={g.avatar} className="w-full h-full object-cover" />
-                                        <div className={`absolute top-0 left-0 px-1 py-0.5 text-[8px] md:text-[10px] font-bold text-white ${COUNTRY_COLORS[g.country]}`}>
-                                            {g.country}
-                                        </div>
-                                        {g.evolution > 0 && <div className="absolute top-0 right-0 px-1 py-0.5 text-[8px] md:text-[10px] font-bold text-red-400 bg-black/50">+{g.evolution}</div>}
-                                    </div>
-                                    <div className="bg-gradient-to-t from-black to-transparent absolute bottom-0 w-full p-1 pt-3">
-                                        <div className={`font-bold text-[8px] md:text-xs text-center drop-shadow-md truncate ${style.text}`}>{g.name}</div>
-                                        <div className="flex justify-between items-end text-[8px] md:text-[10px] text-stone-300 px-0.5 mt-0.5">
-                                            <span>Lv.{g.level}</span>
-                                            <span className="text-amber-400">{calculatePower(g)}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
-            </div>
-
-            {/* Bond Display */}
-            {team.length > 0 && (
-                <div className="bg-stone-800/50 rounded-lg p-3 border border-stone-700 flex flex-col gap-2">
-                    <div className="flex items-center gap-2 text-stone-400 text-xs uppercase font-bold tracking-wider">
-                        <LinkIcon size={12} /> 激活羁绊
-                    </div>
-                    {activeBonds.length === 0 ? (
-                        <div className="text-stone-600 text-xs md:text-sm italic">暂无激活羁绊 (尝试组合特定武将或同阵营)</div>
-                    ) : (
-                        <div className="flex flex-wrap gap-2">
-                            {activeBonds.map((b, i) => (
-                                <div key={i} className="flex items-center gap-1.5 bg-amber-900/30 border border-amber-700/50 px-2 py-1 rounded text-xs text-amber-200">
-                                    <Zap size={10} className="text-amber-400" />
-                                    <span className="font-bold">{b.name}</span>
-                                    <span className="text-amber-400/70">({b.boost})</span>
-                                </div>
-                            ))}
+        <div className="space-y-6">
+            <Panel title={<div className="flex justify-between items-center w-full"><span className="font-calligraphy text-xl text-gold-300">中军大帐</span><Button onClick={autoTeam} variant="secondary" className="text-xs px-2 py-1">一键整编</Button></div>}>
+                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide min-h-[120px]">
+                    {team.length === 0 ? <div className="text-stone-500 text-sm w-full text-center py-8 italic">暂无出战武将</div> : team.map(g => (
+                        <div key={g.uid} className="relative w-20 shrink-0 bg-[#1a1816] border-2 border-gold-700 shadow-lg">
+                            <div className="w-full h-24 overflow-hidden relative">
+                                <img src={g.avatar} className="w-full h-full object-cover" />
+                                <div className={`absolute top-0 left-0 px-1 text-[9px] text-white ${COUNTRY_COLORS[g.country]}`}>{g.country}</div>
+                            </div>
+                            <div className="bg-[#2c1810] p-1 text-center">
+                                <div className="text-[10px] font-bold text-paper-100 truncate">{g.name}</div>
+                                <div className="text-[9px] text-gold-500">{calculatePower(g)}</div>
+                            </div>
                         </div>
-                    )}
+                    ))}
                 </div>
-            )}
+                {activeBonds.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-[#3E2723] flex flex-wrap gap-2">
+                        {activeBonds.map((b, i) => <span key={i} className="text-[10px] bg-[#3E2723] text-gold-300 px-2 py-1 border border-[#5D4037]">{b.name}</span>)}
+                    </div>
+                )}
+            </Panel>
 
-            {/* 3. General List (Responsive Card Grid) */}
-            <div className="space-y-2">
-                <div className="px-2 font-bold text-stone-300 text-sm border-b border-stone-700 pb-2">
-                    武将名鉴 ({generals.length})
+            <div className="space-y-3">
+                <div className="flex items-center gap-2 px-2">
+                    <div className="w-1 h-4 bg-gold-700"></div>
+                    <h3 className="font-calligraphy text-lg text-paper-200">麾下诸将 ({generals.length})</h3>
                 </div>
-                
-                {/* Mobile & Desktop Friendly Card List */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {sortedGenerals.map(g => {
                         const power = calculatePower(g);
                         const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
                         const shardCount = g.shard_count || 0;
                         const canEvolve = shardCount >= 10;
-                        
-                        // Level Progress
-                        const reqExp = g.level * 100;
-                        const expPercent = Math.min((g.exp / reqExp) * 100, 100);
+                        const expPercent = Math.min((g.exp / (g.level * 100)) * 100, 100);
 
                         return (
-                            <div key={g.uid} className={`bg-stone-800 rounded-lg p-3 border border-stone-700 flex gap-3 shadow-md ${g.is_in_team ? 'bg-amber-900/10 border-amber-800/50 ring-1 ring-amber-800/30' : ''}`}>
-                                {/* Avatar */}
-                                <div className="relative w-16 h-20 shrink-0">
-                                    <div className={`absolute inset-0 border-2 ${style.border} rounded pointer-events-none z-10`}></div>
-                                    <img src={g.avatar} className="w-full h-full rounded object-cover" />
-                                    <div className={`absolute -top-1 -left-1 px-1.5 py-0.5 text-[9px] font-bold text-white rounded-full ${COUNTRY_COLORS[g.country]} z-20`}>
-                                        {g.country}
-                                    </div>
+                            <div key={g.uid} className={`bg-[#2c2824] p-2 border-2 flex gap-3 shadow-md relative ${g.is_in_team ? 'border-gold-700 bg-[#3E2723]' : 'border-[#3E2723]'}`}>
+                                <div className="relative w-16 h-20 shrink-0 border border-[#1a1816]">
+                                    <img src={g.avatar} className="w-full h-full object-cover" />
+                                    <div className={`absolute -top-1 -left-1 w-5 h-5 flex items-center justify-center text-[10px] font-bold text-white rounded-full ${COUNTRY_COLORS[g.country]} border border-black`}>{g.country}</div>
                                 </div>
-
-                                {/* Content */}
                                 <div className="flex-1 flex flex-col justify-between">
-                                    <div className="flex justify-between items-start">
-                                         <div>
-                                            <div className="font-bold text-stone-100 text-sm flex items-center gap-1">
-                                                <span className={style.text}>{g.name}</span>
-                                                {g.evolution > 0 && <span className="text-red-400 text-xs">+{g.evolution}</span>}
-                                                {g.is_in_team && <Shield size={12} className="text-amber-500 fill-amber-500/20"/>}
-                                            </div>
-                                            <div className="text-xs text-yellow-600/80 font-medium flex items-center gap-2">
-                                                {'★'.repeat(g.stars)} 
-                                                <span className="text-stone-400 ml-1 flex items-center gap-1">
-                                                    Lv.{g.level}
-                                                    {/* EXP Bar */}
-                                                    <div className="w-12 h-1 bg-stone-900 rounded-full overflow-hidden border border-stone-600/30">
-                                                        <div className="h-full bg-blue-500" style={{width: `${expPercent}%`}}></div>
-                                                    </div>
-                                                </span>
-                                            </div>
-                                         </div>
-                                         <div className="text-amber-500 font-bold text-sm">
-                                            <span className="text-[10px] text-stone-500 mr-1 font-normal">战力</span>{power}
-                                         </div>
-                                    </div>
-
-                                    {/* Shard Progress */}
-                                    <div className="mt-1.5 flex items-center gap-2">
-                                        <div className="flex-1 h-1.5 bg-stone-900 rounded-full overflow-hidden border border-stone-600/50">
-                                            <div className="h-full bg-purple-500 transition-all duration-300" style={{width: `${Math.min(shardCount * 10, 100)}%`}}></div>
+                                    <div className="flex justify-between">
+                                        <div>
+                                            <span className={`font-bold font-serif ${style.text}`}>{g.name}</span>
+                                            <span className="text-xs text-stone-400 ml-2">Lv.{g.level}</span>
                                         </div>
-                                        <div className="text-[9px] text-stone-400 font-mono whitespace-nowrap">
-                                            碎片: {shardCount}/10
-                                        </div>
+                                        <div className="text-gold-500 font-mono text-sm font-bold">{power}</div>
                                     </div>
-
-                                    {/* Middle: Stats & Equip Icons */}
-                                    <div className="flex justify-between items-end mt-1">
-                                         <div className="text-[10px] font-mono opacity-80 space-x-2 text-stone-300">
-                                            <span className="text-red-300">武{g.str}</span>
-                                            <span className="text-blue-300">智{g.int}</span>
-                                            <span className="text-green-300">统{g.ldr}</span>
-                                         </div>
-                                         <div className="flex gap-1">
-                                            {['weapon', 'armor', 'treasure'].map(type => {
-                                                const eq = g.equipments.find(e => e.type === type);
-                                                return (
-                                                    <div key={type} 
-                                                         className={`w-5 h-5 rounded flex items-center justify-center text-[9px] border ${eq ? 'bg-amber-900/40 border-amber-600 text-amber-200' : 'bg-stone-900 border-stone-700 text-stone-600'}`}
-                                                         title={eq ? eq.name : '空'}>
-                                                        {eq ? eq.name[0] : type[0].toUpperCase()}
-                                                    </div>
-                                                );
-                                            })}
-                                         </div>
+                                    <div className="w-full h-1 bg-[#1a1816] mt-1">
+                                        <div className="h-full bg-blue-600" style={{width: `${expPercent}%`}}></div>
                                     </div>
-
-                                    {/* Bottom: Actions */}
-                                    <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-stone-700/50">
-                                        <button 
-                                            onClick={() => canEvolve ? handleEvolve(g.uid) : toast.show(`需要10个碎片才能进阶 (当前: ${shardCount})`, 'info')} 
-                                            className={`px-2 py-1 rounded text-xs border flex items-center gap-1 transition ${
-                                                canEvolve 
-                                                ? 'bg-purple-900/50 hover:bg-purple-800 text-purple-200 border-purple-700 animate-pulse active:scale-95' 
-                                                : 'bg-stone-800 text-stone-600 border-stone-700 opacity-50 cursor-not-allowed'
-                                            }`}
-                                        >
-                                            <ChevronUp size={12}/> 进阶
-                                        </button>
-                                        
-                                        <button 
-                                            onClick={() => {
-                                                if (!g.is_in_team && isTeamFull) {
-                                                    toast.show('部队已满 (5人)', 'error');
-                                                    return;
-                                                }
-                                                toggle(g.uid, g.is_in_team);
-                                            }} 
-                                            className={`px-3 py-1 rounded text-xs border transition ${
-                                                g.is_in_team 
-                                                    ? 'border-red-800 text-red-400 bg-red-900/10 active:scale-95 hover:bg-red-900/20' 
-                                                    : isTeamFull 
-                                                        ? 'border-stone-600 text-stone-500 bg-stone-800 cursor-not-allowed opacity-50'
-                                                        : 'border-green-800 text-green-400 bg-green-900/10 active:scale-95 hover:bg-green-900/20'
-                                            }`}
-                                        >
-                                            {g.is_in_team ? '下阵' : '上阵'}
-                                        </button>
-                                        <div className="flex border border-stone-600 rounded overflow-hidden">
-                                            <button onClick={() => handleEquip(g.uid)} className="px-3 py-1 bg-stone-700 hover:bg-stone-600 text-amber-500 active:bg-stone-800 transition" title="一键装备">
-                                                <Zap size={14}/>
-                                            </button>
-                                            <div className="w-[1px] bg-stone-600"></div>
-                                            <button onClick={() => handleUnequip(g.uid)} className="px-3 py-1 bg-stone-700 hover:bg-stone-600 text-stone-400 active:bg-stone-800 transition" title="一键卸载">
-                                                <Trash2 size={14}/>
-                                            </button>
+                                    <div className="flex justify-between items-end mt-2">
+                                        <div className="text-[10px] text-stone-500">碎片: {shardCount}/10</div>
+                                        <div className="flex gap-1">
+                                            <Button onClick={() => canEvolve ? handleEvolve(g.uid) : toast.show('碎片不足', 'info')} disabled={!canEvolve} variant={canEvolve ? 'primary' : 'disabled'} className="px-2 py-0.5 text-[10px] h-6">进阶</Button>
+                                            <Button onClick={() => handleEquip(g.uid)} variant="secondary" className="px-2 py-0.5 text-[10px] h-6"><Zap size={10}/></Button>
+                                            <Button onClick={() => { if(!g.is_in_team && isTeamFull) return toast.show('部队已满', 'error'); toggle(g.uid, g.is_in_team); }} variant={g.is_in_team ? 'danger' : 'secondary'} className={`px-2 py-0.5 text-[10px] h-6 ${!g.is_in_team && isTeamFull ? 'grayscale opacity-50' : ''}`}>{g.is_in_team ? '下阵' : '上阵'}</Button>
                                         </div>
                                     </div>
                                 </div>
@@ -1177,152 +820,101 @@ const Barracks = () => {
     );
 };
 
+// --- Campaign ---
 const CampaignPage = () => {
     const { token, refreshUser } = useAuth();
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [battleResult, setBattleResult] = useState<{win: boolean, rewards?: {gold: number, exp: number}, levelUps?: {name: string, from: number, to: number}[]} | null>(null);
     const toast = useToast();
 
-    useEffect(() => {
-        if(token) api.getCampaigns(token).then(setCampaigns);
-    }, [token]);
+    useEffect(() => { if(token) api.getCampaigns(token).then(setCampaigns); }, [token]);
 
     const fight = async (id: number) => {
         if(!token) return;
         const res = await api.battle(token, id);
         if(res.error) return toast.show(res.error, 'error');
-        
         if(res.win) {
             const updated = await api.getCampaigns(token);
             setCampaigns(updated);
             refreshUser();
         }
-        
         setBattleResult(res);
     };
 
     return (
-        <div className="space-y-4">
-            <h2 className="text-xl font-bold border-l-4 border-red-500 pl-3">史诗战役</h2>
-            <div className="space-y-3">
+        <div className="space-y-6">
+            <div className="bg-[#2c1810] text-paper-200 p-3 border-b-2 border-gold-700 flex justify-between items-center font-calligraphy text-xl">
+                <span><Sword className="inline mr-2"/>天下征战</span>
+            </div>
+            <div className="space-y-4">
                 {campaigns.map(c => (
-                    <div key={c.id} className="bg-stone-800 p-4 rounded-lg flex justify-between items-center border border-stone-700 shadow-sm">
+                    <Panel key={c.id} className="flex justify-between items-center bg-gradient-to-r from-[#2c2824] to-[#1a1816]">
                         <div>
-                            <div className="font-bold text-base md:text-lg text-stone-200">{c.name}</div>
-                            <div className="text-xs text-stone-500">推荐战力: <span className="text-amber-600 font-mono">{c.req_power}</span></div>
+                            <div className="font-bold font-serif text-lg text-paper-100">{c.name}</div>
+                            <div className="text-xs text-stone-500 mt-1">推荐战力 <span className="text-gold-500 font-mono">{c.req_power}</span></div>
                         </div>
-                        <div className="flex gap-2">
-                             {c.passed && c.stars === 3 && 
-                                <button onClick={() => fight(c.id)} className="px-3 py-1.5 bg-blue-900/50 text-blue-200 text-xs rounded border border-blue-700 active:scale-95 transition">扫荡</button>
-                             }
-                             <button onClick={() => fight(c.id)} className="px-4 py-2 bg-red-800 hover:bg-red-700 text-white font-bold rounded shadow-md flex items-center gap-2 active:scale-95 transition text-sm">
-                                <Sword size={16} /> 出征
-                             </button>
+                        <div className="flex gap-3">
+                            {c.passed && c.stars === 3 && <Button onClick={() => fight(c.id)} variant="secondary" className="text-xs px-3">扫荡</Button>}
+                            <Button onClick={() => fight(c.id)} variant="primary" className="text-xs px-4">出征</Button>
                         </div>
-                    </div>
+                    </Panel>
                 ))}
             </div>
 
-            {/* Battle Result Modal */}
             {battleResult && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in px-4">
-                    {/* Victory Light Effects */}
-                    {battleResult.win && (
-                        <div className="absolute pointer-events-none overflow-hidden inset-0 flex items-center justify-center">
-                            <div className="w-[800px] h-[800px] bg-gradient-to-r from-amber-500/0 via-amber-500/10 to-amber-500/0 rotate-45 blur-3xl animate-pulse"></div>
-                            <div className="absolute w-[600px] h-[600px] border-[50px] border-dashed border-amber-500/10 rounded-full animate-spin-slow"></div>
-                        </div>
-                    )}
-
-                    <div className={`relative w-full max-w-sm rounded-2xl border-y-4 ${battleResult.win ? 'border-amber-500 bg-stone-900/90' : 'border-stone-600 bg-stone-950/90'} p-1 shadow-2xl transform animate-pop-in`}>
-                        <div className={`rounded-xl p-6 flex flex-col items-center relative overflow-hidden ${battleResult.win ? 'bg-gradient-to-b from-amber-900/20 to-stone-900' : 'bg-stone-900'}`}>
+                    <div className={`relative w-full max-w-sm p-1 shadow-2xl transform animate-pop-in border-4 ${battleResult.win ? 'border-gold-500' : 'border-stone-600'}`}>
+                        <div className="bg-[#1a1816] p-6 text-center relative overflow-hidden">
+                            {battleResult.win && <div className="absolute inset-0 bg-gold-500/10 animate-pulse"></div>}
                             
-                            {/* Header Icon & Title */}
-                            <div className="mb-6 relative">
-                                {battleResult.win ? (
-                                    <>
-                                        <div className="absolute inset-0 bg-amber-500 blur-[40px] opacity-40 animate-pulse"></div>
-                                        <Trophy size={80} className="text-amber-300 relative z-10 drop-shadow-[0_0_15px_rgba(251,191,36,0.8)] animate-bounce" />
-                                    </>
-                                ) : (
-                                    <Skull size={80} className="text-stone-500 relative z-10 drop-shadow-lg" />
-                                )}
+                            <div className="mb-6 relative z-10 flex justify-center">
+                                {battleResult.win ? <Trophy size={80} className="text-gold-500 drop-shadow-lg animate-bounce" /> : <Skull size={80} className="text-stone-500" />}
                             </div>
 
-                            <h2 className={`text-4xl font-black tracking-widest uppercase mb-2 ${battleResult.win ? 'text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-amber-600 drop-shadow-sm' : 'text-stone-500'}`}>
-                                {battleResult.win ? '大获全胜' : '战斗失败'}
+                            <h2 className={`text-4xl font-calligraphy mb-4 ${battleResult.win ? 'text-gold-300' : 'text-stone-500'}`}>
+                                {battleResult.win ? '大获全胜' : '兵败如山倒'}
                             </h2>
-                            
-                            <div className="w-24 h-1 rounded-full bg-gradient-to-r from-transparent via-current to-transparent opacity-50 mb-6 text-stone-500"></div>
 
-                            {/* Rewards Section */}
                             {battleResult.win ? (
-                                <div className="w-full mb-8 space-y-4">
-                                    <div className="grid grid-cols-2 gap-4 w-full">
-                                        <div className="bg-stone-800/80 border border-amber-500/30 rounded-lg p-3 flex flex-col items-center gap-1 relative overflow-hidden group">
-                                            <div className="absolute inset-0 bg-amber-500/5 group-hover:bg-amber-500/10 transition"></div>
-                                            <div className="p-2 bg-stone-900 rounded-full border border-stone-700">
-                                                <div className="text-yellow-500">💰</div>
-                                            </div>
-                                            <span className="text-stone-400 text-[10px] font-bold uppercase tracking-wider">金币</span>
-                                            <span className="text-xl font-bold text-yellow-400">+{battleResult.rewards?.gold}</span>
+                                <div className="space-y-4 relative z-10">
+                                    <div className="flex justify-center gap-8 py-4 border-y border-[#3E2723]">
+                                        <div className="text-center">
+                                            <div className="text-xs text-stone-500 uppercase">赏金</div>
+                                            <div className="text-xl font-bold text-gold-400">+{battleResult.rewards?.gold}</div>
                                         </div>
-                                        <div className="bg-stone-800/80 border border-blue-500/30 rounded-lg p-3 flex flex-col items-center gap-1 relative overflow-hidden group">
-                                            <div className="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition"></div>
-                                            <div className="p-2 bg-stone-900 rounded-full border border-stone-700">
-                                                <div className="text-blue-500">✨</div>
-                                            </div>
-                                            <span className="text-stone-400 text-[10px] font-bold uppercase tracking-wider">经验</span>
-                                            <span className="text-xl font-bold text-blue-300">+{battleResult.rewards?.exp}</span>
+                                        <div className="text-center">
+                                            <div className="text-xs text-stone-500 uppercase">历练</div>
+                                            <div className="text-xl font-bold text-blue-400">+{battleResult.rewards?.exp}</div>
                                         </div>
                                     </div>
-
-                                    {/* Level Up Notifications */}
                                     {battleResult.levelUps && battleResult.levelUps.length > 0 && (
-                                        <div className="animate-fade-in-up w-full">
-                                            <div className="text-center text-xs text-amber-500 font-bold mb-2 tracking-wider uppercase">--- 武将升级 ---</div>
-                                            <div className="space-y-2 max-h-32 overflow-y-auto">
-                                                {battleResult.levelUps.map((u, idx) => (
-                                                    <div key={idx} className="bg-gradient-to-r from-stone-800 via-amber-900/20 to-stone-800 border border-amber-500/30 rounded p-2 flex justify-between items-center text-sm">
-                                                        <span className="font-bold text-amber-200">{u.name}</span>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-stone-400 text-xs">Lv.{u.from}</span>
-                                                            <ArrowUpCircle size={14} className="text-green-400 animate-bounce"/>
-                                                            <span className="text-green-400 font-bold text-lg">Lv.{u.to}</span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                        <div className="text-left bg-[#2c1810] p-2 border border-[#3E2723]">
+                                            <div className="text-xs text-center text-gold-700 mb-2">- 将领晋升 -</div>
+                                            {battleResult.levelUps.map((u, i) => (
+                                                <div key={i} className="flex justify-between text-sm px-2 py-1">
+                                                    <span className="text-paper-200">{u.name}</span>
+                                                    <span className="text-green-500">Lv.{u.from} → Lv.{u.to}</span>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
                             ) : (
-                                <div className="bg-stone-800/50 rounded-lg p-4 mb-8 border border-stone-700/50 text-center w-full">
-                                    <p className="text-stone-400 text-sm leading-relaxed">
-                                        胜败乃兵家常事。<br/>
-                                        <span className="text-stone-500 text-xs">强化武将或调整阵型后再战！</span>
-                                    </p>
-                                </div>
+                                <p className="text-stone-400 text-sm mb-6 font-serif">胜败乃兵家常事，少侠请整顿军马再战！</p>
                             )}
 
-                            {/* Action Button */}
-                            <button 
-                                onClick={() => setBattleResult(null)}
-                                className={`w-full py-3.5 rounded-lg font-bold text-white shadow-lg active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 text-lg
-                                    ${battleResult.win 
-                                        ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 border-t border-amber-400/50 shadow-[0_4px_20px_rgba(245,158,11,0.4)]' 
-                                        : 'bg-stone-700 hover:bg-stone-600 border-t border-stone-500/50'
-                                    }`}
-                            >
-                                <span>{battleResult.win ? '收入囊中' : '重整旗鼓'}</span>
-                            </button>
+                            <div className="mt-8">
+                                <Button onClick={() => setBattleResult(null)} variant={battleResult.win ? 'primary' : 'secondary'} className="w-full py-3 text-lg">
+                                    {battleResult.win ? '凯旋' : '撤退'}
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
         </div>
     );
-}
+};
 
 // --- App Router ---
 export default function App() {
