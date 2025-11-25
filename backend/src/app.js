@@ -3,6 +3,7 @@ import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcryptjs from 'bcryptjs';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { initDB, getDB } from './db.js';
 
@@ -16,9 +17,22 @@ const SECRET_KEY = 'sanguo_secret_key_123';
 app.use(cors());
 app.use(express.json());
 
+// Define the path for custom images (project-root/public/images)
+const imageDir = path.join(__dirname, '../../public/images');
+
+// Ensure the directory exists
+if (!fs.existsSync(imageDir)) {
+    try {
+        fs.mkdirSync(imageDir, { recursive: true });
+        console.log(`Created directory: ${imageDir}`);
+    } catch (err) {
+        console.error(`Failed to create directory ${imageDir}:`, err);
+    }
+}
+
 // Serve static images from project-root/public/images
-// Path resolves to: backend/src/../../public/images -> root/public/images
-app.use('/api/images', express.static(path.join(__dirname, '../../public/images')));
+// Accessible via: http://localhost:3000/api/images/filename.jpg
+app.use('/api/images', express.static(imageDir));
 
 // Middleware for Auth
 const authenticateToken = (req, res, next) => {
