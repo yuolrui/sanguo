@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate, useLocation } from 'react-router-dom';
-import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star, Box, Compass, Trophy, Skull, ArrowUpCircle } from 'lucide-react';
+import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star, Box, Compass, Trophy, Skull } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS, STAR_STYLES, Equipment } from './types';
 
 // --- API Service ---
@@ -462,9 +462,7 @@ const Gacha = () => {
 
              <div className={`text-center mb-8 relative z-10 transition-opacity duration-500 ${phase !== 'idle' ? 'opacity-50' : 'opacity-100'}`}>
                 <h2 className="text-4xl font-calligraphy text-gold-300 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] flex items-center justify-center gap-4">
-                    <div className="w-12 h-[2px] bg-gold-700"></div>
-                    聚贤庄
-                    <div className="w-12 h-[2px] bg-gold-700"></div>
+                    <Sparkles className="text-amber-400" size={24} /> 聚贤庄 <Sparkles className="text-amber-400" size={24} />
                 </h2>
                 <div className="mt-4 inline-flex items-center gap-3 bg-[#2c1810] px-4 py-2 rounded-full border border-[#5D4037] shadow-inner">
                     <span className="text-[#8D6E63] text-xs font-bold">保底进度</span>
@@ -766,7 +764,8 @@ const Barracks = () => {
                     ))}
                 </div>
                 {activeBonds.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-[#3E2723] flex flex-wrap gap-2">
+                    <div className="mt-3 pt-3 border-t border-[#3E2723] flex flex-wrap gap-2 items-center">
+                        <LinkIcon size={12} className="text-stone-500" />
                         {activeBonds.map((b, i) => <span key={i} className="text-[10px] bg-[#3E2723] text-gold-300 px-2 py-1 border border-[#5D4037]">{b.name}</span>)}
                     </div>
                 )}
@@ -805,8 +804,9 @@ const Barracks = () => {
                                     <div className="flex justify-between items-end mt-2">
                                         <div className="text-[10px] text-stone-500">碎片: {shardCount}/10</div>
                                         <div className="flex gap-1">
-                                            <Button onClick={() => canEvolve ? handleEvolve(g.uid) : toast.show('碎片不足', 'info')} disabled={!canEvolve} variant={canEvolve ? 'primary' : 'disabled'} className="px-2 py-0.5 text-[10px] h-6">进阶</Button>
+                                            <Button onClick={() => canEvolve ? handleEvolve(g.uid) : toast.show('碎片不足', 'info')} disabled={!canEvolve} variant={canEvolve ? 'primary' : 'disabled'} className="px-2 py-0.5 text-[10px] h-6"><ChevronUp size={10}/>进阶</Button>
                                             <Button onClick={() => handleEquip(g.uid)} variant="secondary" className="px-2 py-0.5 text-[10px] h-6"><Zap size={10}/></Button>
+                                            <Button onClick={() => handleUnequip(g.uid)} variant="secondary" className="px-2 py-0.5 text-[10px] h-6"><Trash2 size={10}/></Button>
                                             <Button onClick={() => { if(!g.is_in_team && isTeamFull) return toast.show('部队已满', 'error'); toggle(g.uid, g.is_in_team); }} variant={g.is_in_team ? 'danger' : 'secondary'} className={`px-2 py-0.5 text-[10px] h-6 ${!g.is_in_team && isTeamFull ? 'grayscale opacity-50' : ''}`}>{g.is_in_team ? '下阵' : '上阵'}</Button>
                                         </div>
                                     </div>
