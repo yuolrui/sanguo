@@ -539,11 +539,50 @@ const calculatePower = (g: UserGeneral) => {
     return Math.floor(basePower + equipPower);
 };
 
-// --- Bond Logic ---
-const BONDS = [
-    { name: '桃园结义', desc: '刘备、关羽、张飞', boost: '战力+20%', generals: ['刘备', '关羽', '张飞'], condition: (names: string[]) => ['刘备', '关羽', '张飞'].every(n => names.includes(n)) },
-    { name: '五虎上将', desc: '五虎将 ≥ 3人', boost: '战力+15%', generals: ['关羽', '张飞', '赵云', '马超', '黄忠'], condition: (names: string[]) => ['关羽', '张飞', '赵云', '马超', '黄忠'].filter(n => names.includes(n)).length >= 3 },
-    { name: '五子良将', desc: '五子良将 ≥ 3人', boost: '战力+15%', generals: ['张辽', '张郃', '徐晃', '于禁', '乐进'], condition: (names: string[]) => ['张辽', '张郃', '徐晃', '于禁', '乐进'].filter(n => names.includes(n)).length >= 3 },
+// --- Bond Logic Definitions ---
+// NOTE: The actual stat boosting logic is handled on the backend for battle calculations.
+// This definition is primarily for UI display (Active Bonds in Barracks, Potential Bonds in Gallery).
+interface BondDef {
+    name: string;
+    desc: string;
+    boost: string;
+    condition: (names: string[], countries: string[]) => boolean;
+    generals?: string[];
+    country?: string;
+}
+
+const BONDS: BondDef[] = [
+    // Wei
+    { name: '曹魏奠基', desc: '曹操/夏侯惇/夏侯渊/曹仁/曹洪 (≥3人)', boost: '防御+15% 兵力+10%', generals: ['曹操', '夏侯惇', '夏侯渊', '曹仁', '曹洪'], condition: (names) => ['曹操', '夏侯惇', '夏侯渊', '曹仁', '曹洪'].filter(n => names.includes(n)).length >= 3 },
+    { name: '五子良将', desc: '张辽/张郃/徐晃/于禁/乐进 (≥3人)', boost: '攻击+18% (5人+暴击)', generals: ['张辽', '张郃', '徐晃', '于禁', '乐进'], condition: (names) => ['张辽', '张郃', '徐晃', '于禁', '乐进'].filter(n => names.includes(n)).length >= 3 },
+    { name: '虎卫双雄', desc: '典韦+许褚', boost: '攻击+30%', generals: ['典韦', '许褚'], condition: (names) => ['典韦', '许褚'].every(n => names.includes(n)) },
+    { name: '司马之心', desc: '司马懿/师/昭/邓艾/钟会 (≥3人)', boost: '谋略+20%', generals: ['司马懿', '司马师', '司马昭', '邓艾', '钟会'], condition: (names) => ['司马懿', '司马师', '司马昭', '邓艾', '钟会'].filter(n => names.includes(n)).length >= 3 },
+    
+    // Shu
+    { name: '桃园结义', desc: '刘备+关羽+张飞', boost: '攻击+25% 援护', generals: ['刘备', '关羽', '张飞'], condition: (names) => ['刘备', '关羽', '张飞'].every(n => names.includes(n)) },
+    { name: '五虎上将', desc: '关羽/张飞/赵云/马超/黄忠 (≥3人)', boost: '暴伤+30% (5人破防)', generals: ['关羽', '张飞', '赵云', '马超', '黄忠'], condition: (names) => ['关羽', '张飞', '赵云', '马超', '黄忠'].filter(n => names.includes(n)).length >= 3 },
+    { name: '卧龙凤雏', desc: '诸葛亮+庞统', boost: '技能伤害+25%', generals: ['诸葛亮', '庞统'], condition: (names) => ['诸葛亮', '庞统'].every(n => names.includes(n)) },
+    { name: '北伐支柱', desc: '诸葛亮/姜维/魏延/王平 (≥3人)', boost: '防御+20% 策防+30%', generals: ['诸葛亮', '姜维', '魏延', '王平'], condition: (names) => ['诸葛亮', '姜维', '魏延', '王平'].filter(n => names.includes(n)).length >= 3 },
+
+    // Wu
+    { name: '江东双璧', desc: '孙策+周瑜', boost: '速度+20 攻击+15%', generals: ['孙策', '周瑜'], condition: (names) => ['孙策', '周瑜'].every(n => names.includes(n)) },
+    { name: '东吴四英', desc: '周瑜/鲁肃/吕蒙/陆逊 (4人)', boost: '火系伤害+40%', generals: ['周瑜', '鲁肃', '吕蒙', '陆逊'], condition: (names) => ['周瑜', '鲁肃', '吕蒙', '陆逊'].every(n => names.includes(n)) },
+    { name: '江表虎臣', desc: '程普/黄盖/甘宁/周泰... (≥4人)', boost: '兵力+15% 追击', generals: ['程普', '黄盖', '韩当', '周泰', '蒋钦', '陈武', '董袭', '甘宁', '凌统', '徐盛', '潘璋', '丁奉'], condition: (names) => ['程普', '黄盖', '韩当', '周泰', '蒋钦', '陈武', '董袭', '甘宁', '凌统', '徐盛', '潘璋', '丁奉'].filter(n => names.includes(n)).length >= 4 },
+    { name: '孙氏宗亲', desc: '孙坚/孙策/孙权... (≥3人)', boost: '全属性+10%', generals: ['孙坚', '孙策', '孙权', '孙桓', '孙韶'], condition: (names) => ['孙坚', '孙策', '孙权', '孙桓', '孙韶'].filter(n => names.includes(n)).length >= 3 },
+
+    // Qun
+    { name: '乱世开端', desc: '董卓/吕布/华雄/李傕/郭汜 (≥3人)', boost: '攻击+20% 防御-10%', generals: ['董卓', '吕布', '华雄', '李傕', '郭汜'], condition: (names) => ['董卓', '吕布', '华雄', '李傕', '郭汜'].filter(n => names.includes(n)).length >= 3 },
+    { name: '河北庭柱', desc: '颜良/文丑/张郃/高览 (4人)', boost: '首回合攻击+50%', generals: ['颜良', '文丑', '张郃', '高览'], condition: (names) => ['颜良', '文丑', '张郃', '高览'].every(n => names.includes(n)) },
+    { name: '白马义从', desc: '公孙瓒+赵云', boost: '速度大幅提升', generals: ['公孙瓒', '赵云'], condition: (names) => ['公孙瓒', '赵云'].every(n => names.includes(n)) },
+    { name: '汉室余晖', desc: '卢植/皇甫嵩/朱儁 (3人)', boost: '对群雄伤害+50%', generals: ['卢植', '皇甫嵩', '朱儁'], condition: (names) => ['卢植', '皇甫嵩', '朱儁'].every(n => names.includes(n)) },
+
+    // Cross
+    { name: '君臣相知', desc: '刘备+诸葛亮', boost: '刘备生存↑ 诸葛亮计策↑', generals: ['刘备', '诸葛亮'], condition: (names) => ['刘备', '诸葛亮'].every(n => names.includes(n)) },
+    { name: '宿命之敌', desc: '关羽+庞德', boost: '互相伤害+50%', generals: ['关羽', '庞德'], condition: (names) => ['关羽', '庞德'].every(n => names.includes(n)) },
+    { name: '忠义两全', desc: '关羽+张辽', boost: '防御+25% 免控', generals: ['关羽', '张辽'], condition: (names) => ['关羽', '张辽'].every(n => names.includes(n)) },
+    { name: '武之极境', desc: '吕布/关羽/典韦... (≥3人)', boost: '攻击+20% 暴击+15%', generals: ['吕布', '关羽', '张飞', '赵云', '马超', '典韦', '许褚'], condition: (names) => ['吕布', '关羽', '张飞', '赵云', '马超', '典韦', '许褚'].filter(n => names.includes(n)).length >= 3 },
+    
+    // Fallback Faction Bonds
     { name: '魏国精锐', desc: '魏国 ≥ 3人', boost: '战力+10%', country: '魏', condition: (_: any, countries: string[]) => countries.filter(c => c === '魏').length >= 3 },
     { name: '蜀汉英杰', desc: '蜀国 ≥ 3人', boost: '战力+10%', country: '蜀', condition: (_: any, countries: string[]) => countries.filter(c => c === '蜀').length >= 3 },
     { name: '江东虎臣', desc: '吴国 ≥ 3人', boost: '战力+10%', country: '吴', condition: (_: any, countries: string[]) => countries.filter(c => c === '吴').length >= 3 },
@@ -553,6 +592,9 @@ const BONDS = [
 const getActiveBonds = (team: UserGeneral[]) => {
     const names = team.map(g => g.name);
     const countries = team.map(g => g.country);
+    // Filter logic: Specific named bonds take priority visually, but we can show all active ones.
+    // To avoid clutter, if a specific bond like "Five Tigers" is active, we might want to hide "Shu Heroes" if desired, 
+    // but showing all bonuses is more transparent.
     return BONDS.filter(b => b.condition(names, countries));
 };
 
@@ -766,7 +808,12 @@ const Barracks = () => {
                 {activeBonds.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-[#3E2723] flex flex-wrap gap-2 items-center">
                         <LinkIcon size={12} className="text-stone-500" />
-                        {activeBonds.map((b, i) => <span key={i} className="text-[10px] bg-[#3E2723] text-gold-300 px-2 py-1 border border-[#5D4037]">{b.name}</span>)}
+                        {activeBonds.map((b, i) => (
+                            <div key={i} className="flex flex-col items-start">
+                                <span className="text-[10px] bg-[#3E2723] text-gold-300 px-2 py-1 border border-[#5D4037] font-bold">{b.name}</span>
+                                <span className="text-[8px] text-stone-400 ml-1">{b.boost}</span>
+                            </div>
+                        ))}
                     </div>
                 )}
             </Panel>

@@ -118,9 +118,7 @@ app.get('/api/user/collection', authenticateToken, async (req, res) => {
     // Get owned equipments and who they are assigned to
     const ownedEquipments = await db.all('SELECT equipment_id, general_id FROM user_equipments WHERE user_id = ?', [userId]);
     
-    // Map assignments: equipment_id -> [General Name 1, General Name 2]
-    // Note: equipment_id refers to the 'type' of equipment, multiple instances can exist.
-    // We need to join with user_generals and generals to get names.
+    // Map assignments
     const assignmentsRaw = await db.all(`
         SELECT ue.equipment_id, g.name as general_name
         FROM user_equipments ue
@@ -226,15 +224,13 @@ app.post('/api/gacha/ten', authenticateToken, async (req, res) => {
     res.json({ generals: results });
 });
 
-// Auto Team (One-click)
+// Auto Team
 app.post('/api/team/auto', authenticateToken, async (req, res) => {
     const db = getDB();
     const userId = req.user.id;
 
-    // Reset current team
     await db.run('UPDATE user_generals SET is_in_team = 0 WHERE user_id = ?', [userId]);
 
-    // Get all generals sorted by approximate power desc
     const allGenerals = await db.all(`
         SELECT ug.id, ug.general_id, (g.str + g.int + g.ldr) * ug.level * (1 + (IFNULL(ug.evolution, 0) * 0.1)) as power 
         FROM user_generals ug
@@ -243,7 +239,6 @@ app.post('/api/team/auto', authenticateToken, async (req, res) => {
         ORDER BY power DESC
     `, [userId]);
 
-    // Select top 5 unique generals
     const team = [];
     const usedGeneralIds = new Set();
 
@@ -262,16 +257,14 @@ app.post('/api/team/auto', authenticateToken, async (req, res) => {
     res.json({ success: true, count: team.length });
 });
 
-// Auto Equip (One-click Equip)
+// Auto Equip
 app.post('/api/equip/auto', authenticateToken, async (req, res) => {
     const { generalUid } = req.body;
     const userId = req.user.id;
     const db = getDB();
 
-    // 1. Unequip all items from this general first
     await db.run('UPDATE user_equipments SET general_id = NULL WHERE user_id = ? AND general_id = ?', [userId, generalUid]);
 
-    // 2. Find best available Weapon, Armor, Treasure
     const types = ['weapon', 'armor', 'treasure'];
     for (const type of types) {
         const bestItem = await db.get(`
@@ -290,7 +283,7 @@ app.post('/api/equip/auto', authenticateToken, async (req, res) => {
     res.json({ success: true });
 });
 
-// Unequip All
+// Unequip
 app.post('/api/equip/unequip', authenticateToken, async (req, res) => {
     const { generalUid } = req.body;
     const userId = req.user.id;
@@ -300,24 +293,19 @@ app.post('/api/equip/unequip', authenticateToken, async (req, res) => {
     res.json({ success: true });
 });
 
-// Evolve General (Consumes Shards)
+// Evolve
 app.post('/api/general/evolve', authenticateToken, async (req, res) => {
     const { targetUid } = req.body;
     const userId = req.user.id;
     const db = getDB();
 
-    // Verify ownership
     const target = await db.get('SELECT * FROM user_generals WHERE id = ? AND user_id = ?', [targetUid, userId]);
     if (!target) return res.status(404).json({ error: 'General not found' });
 
-    // Check shards
     const shards = await db.get('SELECT count FROM user_shards WHERE user_id = ? AND general_id = ?', [userId, target.general_id]);
     if (!shards || shards.count < 10) return res.status(400).json({ error: 'Not enough shards (Need 10)' });
 
-    // Consume 10 shards
     await db.run('UPDATE user_shards SET count = count - 10 WHERE user_id = ? AND general_id = ?', [userId, target.general_id]);
-
-    // Evolve target
     await db.run('UPDATE user_generals SET evolution = evolution + 1 WHERE id = ?', [targetUid]);
 
     res.json({ success: true });
@@ -336,15 +324,13 @@ app.get('/api/campaigns', authenticateToken, async (req, res) => {
   res.json(result);
 });
 
-// Battle
+// Battle Logic
 app.post('/api/battle/:id', authenticateToken, async (req, res) => {
   const campaignId = req.params.id;
   const db = getDB();
   
   const campaign = await db.get('SELECT * FROM campaigns WHERE id = ?', [campaignId]);
   
-  // Calculate user power (Base + Evolution + Equipment)
-  // IMPORTANT: Fetch current EXP and Level to process leveling
   const team = await db.all(`
     SELECT ug.id, g.name, g.country, g.str, g.int, g.ldr, ug.level, ug.exp, ug.evolution 
     FROM user_generals ug 
@@ -356,10 +342,9 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
   let rawTotalPower = 0;
 
   for (const m of team) {
-    let evolutionBonus = 1 + (m.evolution || 0) * 0.1; // 10% per evolution
+    let evolutionBonus = 1 + (m.evolution || 0) * 0.1; 
     let generalPower = (m.str + m.int + m.ldr) * m.level * evolutionBonus;
     
-    // Add equipment bonus
     const equips = await db.all(`
         SELECT e.stat_bonus 
         FROM user_equipments ue
@@ -370,47 +355,88 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
     rawTotalPower += generalPower;
   }
 
-  // --- BOND CALCULATION ---
+  // --- ENHANCED BOND CALCULATION ---
   let bondMultiplier = 1.0;
-  const teamNames = team.map(g => g.name);
-  const teamCountries = team.map(g => g.country);
-
-  // 1. Faction Bond (>= 3 Same Country)
+  const names = team.map(g => g.name);
+  const countries = team.map(g => g.country);
   const countryCounts = {};
-  teamCountries.forEach(c => countryCounts[c] = (countryCounts[c] || 0) + 1);
-  if (Object.values(countryCounts).some(count => count >= 3)) {
-      bondMultiplier += 0.10; // 10% bonus
-  }
+  countries.forEach(c => countryCounts[c] = (countryCounts[c] || 0) + 1);
 
-  // 2. Peach Garden Oath (Liu Bei, Guan Yu, Zhang Fei)
-  const bondPeach = ['刘备', '关羽', '张飞'];
-  if (bondPeach.every(n => teamNames.includes(n))) {
-      bondMultiplier += 0.20; // 20% bonus
-  }
+  // Helper: Count how many specific generals are in the team
+  const countGenerals = (targetNames) => names.filter(n => targetNames.includes(n)).length;
+  const hasGenerals = (targetNames) => targetNames.every(n => names.includes(n));
 
-  // 3. Five Tiger Generals (Needs >= 3)
-  const bondTigers = ['关羽', '张飞', '赵云', '马超', '黄忠'];
-  const tigerCount = teamNames.filter(n => bondTigers.includes(n)).length;
-  if (tigerCount >= 3) {
-      bondMultiplier += 0.15; // 15% bonus
-  }
+  // 1. Wei Bonds
+  if (hasGenerals(['曹操', '夏侯惇', '夏侯渊', '曹仁', '曹洪'])) bondMultiplier += 0.20; // Cao Wei Foundation (Full)
+  else if (countGenerals(['曹操', '夏侯惇', '夏侯渊', '曹仁', '曹洪']) >= 3) bondMultiplier += 0.12; // Foundation (Partial)
 
-  // 4. Five Elite Generals (Wei) (Needs >= 3)
-  const bondElites = ['张辽', '张郃', '徐晃', '于禁', '乐进'];
-  const eliteCount = teamNames.filter(n => bondElites.includes(n)).length;
-  if (eliteCount >= 3) {
-      bondMultiplier += 0.15; // 15% bonus
+  if (countGenerals(['张辽', '张郃', '徐晃', '于禁', '乐进']) >= 5) bondMultiplier += 0.25; // Five Elites (Full)
+  else if (countGenerals(['张辽', '张郃', '徐晃', '于禁', '乐进']) >= 3) bondMultiplier += 0.18; // Five Elites (Partial)
+
+  if (hasGenerals(['典韦', '许褚'])) bondMultiplier += 0.30; // Tiger Guards (Strong Duo)
+
+  if (countGenerals(['司马懿', '司马师', '司马昭', '邓艾', '钟会']) >= 5) bondMultiplier += 0.25; // Sima's Heart (Full)
+  else if (countGenerals(['司马懿', '司马师', '司马昭', '邓艾', '钟会']) >= 3) bondMultiplier += 0.20; // Sima's Heart (Partial)
+
+  // 2. Shu Bonds
+  if (hasGenerals(['刘备', '关羽', '张飞'])) bondMultiplier += 0.25; // Peach Garden (Buffed)
+
+  if (countGenerals(['关羽', '张飞', '赵云', '马超', '黄忠']) >= 5) bondMultiplier += 0.30; // Five Tigers (Full - Critical)
+  else if (countGenerals(['关羽', '张飞', '赵云', '马超', '黄忠']) >= 3) bondMultiplier += 0.18;
+
+  if (hasGenerals(['诸葛亮', '庞统'])) bondMultiplier += 0.25; // Wolong Fengchu
+
+  if (countGenerals(['诸葛亮', '姜维', '魏延', '王平']) >= 4) bondMultiplier += 0.20; // Northern Expedition (Full)
+  else if (countGenerals(['诸葛亮', '姜维', '魏延', '王平']) >= 3) bondMultiplier += 0.15;
+
+  // 3. Wu Bonds
+  if (hasGenerals(['孙策', '周瑜'])) bondMultiplier += 0.20; // Jiangdong Double Walls
+
+  if (countGenerals(['周瑜', '鲁肃', '吕蒙', '陆逊']) >= 4) bondMultiplier += 0.40; // Four Heroes (Fire Strategy - Massive Boost)
+
+  // Twelve Tiger Subjects (Sample of 4)
+  const tigerSubjects = ['程普', '黄盖', '韩当', '周泰', '蒋钦', '陈武', '董袭', '甘宁', '凌统', '徐盛', '潘璋', '丁奉'];
+  if (countGenerals(tigerSubjects) >= 4) bondMultiplier += 0.15;
+
+  if (countGenerals(['孙坚', '孙策', '孙权', '孙桓', '孙韶']) >= 5) bondMultiplier += 0.20; // Sun Family
+  else if (countGenerals(['孙坚', '孙策', '孙权', '孙桓', '孙韶']) >= 3) bondMultiplier += 0.10;
+
+  // 4. Warlords (Qun)
+  if (countGenerals(['董卓', '吕布', '华雄', '李傕', '郭汜']) >= 5) bondMultiplier += 0.25;
+  else if (countGenerals(['董卓', '吕布', '华雄', '李傕', '郭汜']) >= 3) bondMultiplier += 0.15;
+
+  if (countGenerals(['颜良', '文丑', '张郃', '高览']) >= 4) bondMultiplier += 0.30; // Hebei Pillars
+
+  if (hasGenerals(['公孙瓒', '赵云'])) bondMultiplier += 0.15; // White Horse
+
+  if (countGenerals(['卢植', '皇甫嵩', '朱儁']) >= 3) bondMultiplier += 0.30; // Han Echo (Strong vs Yellow Turbans/Qun)
+
+  // 5. Cross Faction
+  if (hasGenerals(['刘备', '诸葛亮'])) bondMultiplier += 0.15;
+  if (hasGenerals(['关羽', '庞德'])) bondMultiplier += 0.20; // Fated Enemies (Aggressive)
+  if (hasGenerals(['关羽', '张辽'])) bondMultiplier += 0.15; // Loyal Friends
+  
+  // Martial Peak (Lu Bu + 5 Tigers + Dian/Xu)
+  const martialGods = ['吕布', '关羽', '张飞', '赵云', '马超', '典韦', '许褚'];
+  if (countGenerals(martialGods) >= 5) bondMultiplier += 0.35;
+  else if (countGenerals(martialGods) >= 3) bondMultiplier += 0.20;
+
+  // 6. Simple Faction Bonus (Fallback)
+  // If no specific major bond, give small faction boost
+  if (bondMultiplier === 1.0) {
+      if (Object.values(countryCounts).some(count => count >= 3)) {
+          bondMultiplier += 0.10;
+      }
   }
 
   const finalPower = Math.floor(rawTotalPower * bondMultiplier);
   // --- END BOND CALCULATION ---
 
-  const win = finalPower >= campaign.req_power || Math.random() > 0.8; // 20% luck
+  const win = finalPower >= campaign.req_power || Math.random() > 0.8; 
   
   if (win) {
     await db.run('UPDATE users SET gold = gold + ? WHERE id = ?', [campaign.gold_drop, req.user.id]);
     
-    // --- LEVEL UP LOGIC ---
     const expGain = campaign.exp_drop;
     const levelUps = [];
 
@@ -418,29 +444,24 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
         let newExp = g.exp + expGain;
         let newLevel = g.level;
         let didLevelUp = false;
-
-        // Formula: Level * 100 exp required for next level
         let reqExp = newLevel * 100;
 
         while (newExp >= reqExp) {
             newExp -= reqExp;
             newLevel++;
             didLevelUp = true;
-            reqExp = newLevel * 100; // Recalculate for next level if multi-level up
+            reqExp = newLevel * 100;
         }
 
-        // Update DB
         await db.run('UPDATE user_generals SET level = ?, exp = ? WHERE id = ?', [newLevel, newExp, g.id]);
 
         if (didLevelUp) {
             levelUps.push({ name: g.name, from: g.level, to: newLevel });
         }
     }
-    // --- END LEVEL UP LOGIC ---
 
-    // Chance to drop equipment (20%)
     if (Math.random() < 0.2) {
-        const eqPool = await db.all('SELECT * FROM equipments WHERE stars <= 3'); // Low level drop
+        const eqPool = await db.all('SELECT * FROM equipments WHERE stars <= 3');
         const drop = eqPool[Math.floor(Math.random() * eqPool.length)];
         if (drop) {
             await db.run('INSERT INTO user_equipments (user_id, equipment_id) VALUES (?, ?)', [req.user.id, drop.id]);
@@ -449,7 +470,6 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
 
     await db.run(`INSERT OR REPLACE INTO user_campaign_progress (user_id, campaign_id, stars) VALUES (?, ?, 3)`, [req.user.id, campaignId]);
     
-    // Return rewards including level ups
     res.json({ 
         win: true, 
         rewards: { gold: campaign.gold_drop, exp: campaign.exp_drop },
@@ -460,9 +480,9 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Team Management (Manual)
+// Team Management
 app.post('/api/team', authenticateToken, async (req, res) => {
-  const { generalUid, action } = req.body; // action: 'add' | 'remove'
+  const { generalUid, action } = req.body;
   const db = getDB();
   const userId = req.user.id;
 
@@ -477,7 +497,6 @@ app.post('/api/team', authenticateToken, async (req, res) => {
       const target = await db.get('SELECT general_id FROM user_generals WHERE id = ? AND user_id = ?', [generalUid, userId]);
       if (!target) return res.status(404).json({ error: 'General not found' });
 
-      // Check for duplicate general type in team
       const hasDuplicate = currentTeam.some(g => g.general_id === target.general_id);
       if (hasDuplicate) return res.status(400).json({ error: 'Cannot have duplicate generals in team' });
   }
@@ -494,13 +513,11 @@ app.post('/api/signin', authenticateToken, async (req, res) => {
   
   if (user.last_signin === today) return res.status(400).json({ error: 'Already signed in today' });
   
-  await db.run('UPDATE users SET gold = gold + 500, tokens = tokens + 10, last_signin = ? WHERE id = ?', [today, req.user.id]); // Increased tokens for testing
+  await db.run('UPDATE users SET gold = gold + 500, tokens = tokens + 10, last_signin = ? WHERE id = ?', [today, req.user.id]);
   res.json({ rewards: { gold: 500, tokens: 10 } });
 });
 
 // --- ADMIN ROUTES ---
-
-// 1. Get Base Data (For Dropdowns)
 app.get('/admin/v1/meta', authenticateToken, isAdmin, async (req, res) => {
     const db = getDB();
     const generals = await db.all('SELECT * FROM generals');
@@ -508,7 +525,6 @@ app.get('/admin/v1/meta', authenticateToken, isAdmin, async (req, res) => {
     res.json({ generals, equipments });
 });
 
-// 2. Add Base General
 app.post('/admin/v1/generals', authenticateToken, isAdmin, async (req, res) => {
     const { name, stars, str, int, ldr, luck, country, avatar, description } = req.body;
     const db = getDB();
@@ -519,37 +535,30 @@ app.post('/admin/v1/generals', authenticateToken, isAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
-// 3. User Management - List Users
 app.get('/admin/v1/users', authenticateToken, isAdmin, async (req, res) => {
     const db = getDB();
     const users = await db.all('SELECT id, username, gold, tokens FROM users ORDER BY id DESC');
     res.json(users);
 });
 
-// 4. User Management - Get User Detail
 app.get('/admin/v1/users/:id', authenticateToken, isAdmin, async (req, res) => {
     const db = getDB();
     const userId = req.params.id;
-    
     const user = await db.get('SELECT id, username, gold, tokens FROM users WHERE id = ?', [userId]);
     if (!user) return res.status(404).json({error: 'User not found'});
-
     const generals = await db.all(`
         SELECT ug.id as uid, g.name, g.stars, g.avatar, ug.level 
         FROM user_generals ug 
         JOIN generals g ON ug.general_id = g.id 
         WHERE ug.user_id = ?`, [userId]);
-
     const equipments = await db.all(`
         SELECT ue.id as uid, e.name, e.type, e.stars 
         FROM user_equipments ue 
         JOIN equipments e ON ue.equipment_id = e.id 
         WHERE ue.user_id = ?`, [userId]);
-
     res.json({ user, generals, equipments });
 });
 
-// 5. Update User Currency
 app.post('/admin/v1/users/:id/currency', authenticateToken, isAdmin, async (req, res) => {
     const { gold, tokens } = req.body;
     const db = getDB();
@@ -557,28 +566,23 @@ app.post('/admin/v1/users/:id/currency', authenticateToken, isAdmin, async (req,
     res.json({ success: true });
 });
 
-// 6. Grant/Revoke General
 app.post('/admin/v1/users/:id/general', authenticateToken, isAdmin, async (req, res) => {
-    const { generalId, action, uid } = req.body; // action: 'add' | 'remove'
+    const { generalId, action, uid } = req.body;
     const db = getDB();
     const userId = req.params.id;
-    
     if (action === 'add') {
         await db.run('INSERT INTO user_generals (user_id, general_id) VALUES (?, ?)', [userId, generalId]);
     } else {
         await db.run('DELETE FROM user_generals WHERE id = ? AND user_id = ?', [uid, userId]);
-        // Also remove equipments from this general
         await db.run('UPDATE user_equipments SET general_id = NULL WHERE general_id = ? AND user_id = ?', [uid, userId]);
     }
     res.json({ success: true });
 });
 
-// 7. Grant/Revoke Equipment
 app.post('/admin/v1/users/:id/equipment', authenticateToken, isAdmin, async (req, res) => {
-    const { equipmentId, action, uid } = req.body; // action: 'add' | 'remove'
+    const { equipmentId, action, uid } = req.body;
     const db = getDB();
     const userId = req.params.id;
-
     if (action === 'add') {
         await db.run('INSERT INTO user_equipments (user_id, equipment_id) VALUES (?, ?)', [userId, equipmentId]);
     } else {
@@ -591,8 +595,6 @@ initDB().then(() => {
   const server = app.listen(PORT, () => {
     console.log(`Backend running on port ${PORT}`);
   });
-
-  // Handle Port in Use Error gracefully
   server.on('error', (e) => {
     if (e.code === 'EADDRINUSE') {
       console.error(`\n[FATAL ERROR] Port ${PORT} is already in use.`);
@@ -603,8 +605,6 @@ initDB().then(() => {
       throw e;
     }
   });
-
-  // Graceful Shutdown
   const shutdown = () => {
     console.log('\nStopping server...');
     server.close(() => {
@@ -612,7 +612,6 @@ initDB().then(() => {
         process.exit(0);
     });
   };
-
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 });
