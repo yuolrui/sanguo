@@ -73,7 +73,7 @@ export async function initDB() {
 
     CREATE TABLE IF NOT EXISTS generals (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT,
+      name TEXT UNIQUE,
       stars INTEGER,
       str INTEGER, -- 武力
       int INTEGER, -- 智力
@@ -144,6 +144,20 @@ export async function initDB() {
   try {
       await db.exec("ALTER TABLE user_generals ADD COLUMN evolution INTEGER DEFAULT 0");
   } catch (e) {}
+
+  // Migration: Deduplicate generals if any exist from previous versions to allow unique index creation
+  try {
+      await db.run("DELETE FROM generals WHERE id NOT IN (SELECT MIN(id) FROM generals GROUP BY name)");
+  } catch (e) {
+      console.log("Deduplication step skipped or failed:", e.message);
+  }
+
+  // Migration: Ensure 'name' in 'generals' is unique
+  try {
+      await db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_generals_name ON generals(name)");
+  } catch (e) {
+      console.warn("Warning: Could not create unique index on generals(name).", e.message);
+  }
 
   // Raw General Data (without avatars)
   const rawGenerals = [
@@ -358,24 +372,26 @@ export async function initDB() {
   // Seed Generals
   console.log('Seeding Database with Generals...');
   for (const g of rawGenerals) {
-    // Generate a rich, styled avatar URL dynamically
     const avatarUrl = getAvatarUrl(g.name, g.stars, g.country, g.keywords);
     
-    // Upsert to avoid duplicates but update images
-    await db.run(
-        `INSERT INTO generals (name, stars, str, int, ldr, luck, country, avatar, description) 
-         VALUES (?,?,?,?,?,?,?,?,?)
-         ON CONFLICT(name) DO UPDATE SET 
-            avatar = excluded.avatar, 
-            description = excluded.description,
-            stars = excluded.stars,
-            str = excluded.str,
-            int = excluded.int,
-            ldr = excluded.ldr,
-            luck = excluded.luck,
-            country = excluded.country`,
-        [g.name, g.stars, g.str, g.int, g.ldr, g.luck, g.country, avatarUrl, g.description]
-    );
+    // Manual Upsert to avoid "ON CONFLICT" constraint errors if index creation failed
+    const existing = await db.get('SELECT id FROM generals WHERE name = ?', [g.name]);
+    
+    if (existing) {
+        await db.run(
+            `UPDATE generals SET 
+                stars = ?, str = ?, int = ?, ldr = ?, luck = ?, 
+                country = ?, avatar = ?, description = ?
+             WHERE id = ?`,
+            [g.stars, g.str, g.int, g.ldr, g.luck, g.country, avatarUrl, g.description, existing.id]
+        );
+    } else {
+        await db.run(
+            `INSERT INTO generals (name, stars, str, int, ldr, luck, country, avatar, description) 
+             VALUES (?,?,?,?,?,?,?,?,?)`,
+            [g.name, g.stars, g.str, g.int, g.ldr, g.luck, g.country, avatarUrl, g.description]
+        );
+    }
   }
 
   // Seed Campaigns & Equipment (Only if table is empty)
