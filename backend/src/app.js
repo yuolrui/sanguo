@@ -2,7 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcryptjs from 'bcryptjs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { initDB, getDB } from './db.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3000;
@@ -10,6 +15,10 @@ const SECRET_KEY = 'sanguo_secret_key_123';
 
 app.use(cors());
 app.use(express.json());
+
+// Serve static images from project-root/public/images
+// Path resolves to: backend/src/../../public/images -> root/public/images
+app.use('/api/images', express.static(path.join(__dirname, '../../public/images')));
 
 // Middleware for Auth
 const authenticateToken = (req, res, next) => {
@@ -318,7 +327,7 @@ app.get('/api/campaigns', authenticateToken, async (req, res) => {
   res.json(result);
 });
 
-// Battle Logic (Updated with Skills)
+// Battle Logic
 app.post('/api/battle/:id', authenticateToken, async (req, res) => {
   const campaignId = req.params.id;
   const db = getDB();
@@ -348,10 +357,7 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
     `, [m.id]);
     equips.forEach(e => generalPower += e.stat_bonus);
 
-    // --- SKILL TRIGGER LOGIC ---
-    // Simple logic: Chance = luck / 2 (capped). Boost = Power * 0.5
-    const triggerChance = Math.min(m.luck, 80) / 100; // 80 luck = 80% chance? A bit high, let's normalize.
-    // Let's say base chance 20% + luck/5 %. 80 luck => 36%
+    // Skill Trigger Logic
     const finalChance = 0.2 + (m.luck / 500); 
     
     if (Math.random() < finalChance) {
@@ -363,12 +369,11 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
     rawTotalPower += generalPower;
   }
 
-  // --- BOND CALCULATION ---
+  // Bond Calculation
   let bondMultiplier = 1.0;
   const names = team.map(g => g.name);
   const countries = team.map(g => g.country);
   
-  // Helper
   const countGenerals = (targetNames) => names.filter(n => targetNames.includes(n)).length;
   const hasGenerals = (targetNames) => targetNames.every(n => names.includes(n));
 
@@ -387,7 +392,6 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
 
   if (countGenerals(['董卓', '吕布', '华雄', '李傕', '郭汜']) >= 5) bondMultiplier += 0.25;
   
-  // Faction Fallback
   const countryCounts = {};
   countries.forEach(c => countryCounts[c] = (countryCounts[c] || 0) + 1);
   if (bondMultiplier === 1.0 && Object.values(countryCounts).some(count => count >= 3)) {
@@ -445,7 +449,7 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Team Management
+// Team Management (Manual)
 app.post('/api/team', authenticateToken, async (req, res) => {
   const { generalUid, action } = req.body;
   const db = getDB();
