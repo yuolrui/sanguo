@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode, FormEvent } from 'react';
 import { HashRouter, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
-import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star, Box, Compass, Trophy, Skull } from 'lucide-react';
+import { Sword, Users, Scroll, ShoppingBag, Landmark, LogOut, Gift, Zap, Trash2, Shield, CheckCircle, XCircle, Info, ChevronUp, Link as LinkIcon, BookOpen, Sparkles, Star, Box, Compass, Trophy, Skull, ArrowUpCircle } from 'lucide-react';
 import { User, General, UserGeneral, Campaign, COUNTRY_COLORS, STAR_STYLES, Equipment } from './types';
 
 // --- API Service ---
@@ -1045,6 +1045,10 @@ const Barracks = () => {
                         const style = STAR_STYLES[g.stars] || STAR_STYLES[1];
                         const shardCount = g.shard_count || 0;
                         const canEvolve = shardCount >= 10;
+                        
+                        // Level Progress
+                        const reqExp = g.level * 100;
+                        const expPercent = Math.min((g.exp / reqExp) * 100, 100);
 
                         return (
                             <div key={g.uid} className={`bg-stone-800 rounded-lg p-3 border border-stone-700 flex gap-3 shadow-md ${g.is_in_team ? 'bg-amber-900/10 border-amber-800/50 ring-1 ring-amber-800/30' : ''}`}>
@@ -1066,7 +1070,16 @@ const Barracks = () => {
                                                 {g.evolution > 0 && <span className="text-red-400 text-xs">+{g.evolution}</span>}
                                                 {g.is_in_team && <Shield size={12} className="text-amber-500 fill-amber-500/20"/>}
                                             </div>
-                                            <div className="text-xs text-yellow-600/80 font-medium">{'★'.repeat(g.stars)} <span className="text-stone-500 ml-1">Lv.{g.level}</span></div>
+                                            <div className="text-xs text-yellow-600/80 font-medium flex items-center gap-2">
+                                                {'★'.repeat(g.stars)} 
+                                                <span className="text-stone-400 ml-1 flex items-center gap-1">
+                                                    Lv.{g.level}
+                                                    {/* EXP Bar */}
+                                                    <div className="w-12 h-1 bg-stone-900 rounded-full overflow-hidden border border-stone-600/30">
+                                                        <div className="h-full bg-blue-500" style={{width: `${expPercent}%`}}></div>
+                                                    </div>
+                                                </span>
+                                            </div>
                                          </div>
                                          <div className="text-amber-500 font-bold text-sm">
                                             <span className="text-[10px] text-stone-500 mr-1 font-normal">战力</span>{power}
@@ -1144,7 +1157,7 @@ const Barracks = () => {
 const CampaignPage = () => {
     const { token, refreshUser } = useAuth();
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-    const [battleResult, setBattleResult] = useState<{win: boolean, rewards?: {gold: number, exp: number}} | null>(null);
+    const [battleResult, setBattleResult] = useState<{win: boolean, rewards?: {gold: number, exp: number}, levelUps?: {name: string, from: number, to: number}[]} | null>(null);
     const toast = useToast();
 
     useEffect(() => {
@@ -1221,23 +1234,44 @@ const CampaignPage = () => {
 
                             {/* Rewards Section */}
                             {battleResult.win ? (
-                                <div className="grid grid-cols-2 gap-4 w-full mb-8">
-                                    <div className="bg-stone-800/80 border border-amber-500/30 rounded-lg p-3 flex flex-col items-center gap-1 relative overflow-hidden group">
-                                        <div className="absolute inset-0 bg-amber-500/5 group-hover:bg-amber-500/10 transition"></div>
-                                        <div className="p-2 bg-stone-900 rounded-full border border-stone-700">
-                                            <div className="text-yellow-500">💰</div>
+                                <div className="w-full mb-8 space-y-4">
+                                    <div className="grid grid-cols-2 gap-4 w-full">
+                                        <div className="bg-stone-800/80 border border-amber-500/30 rounded-lg p-3 flex flex-col items-center gap-1 relative overflow-hidden group">
+                                            <div className="absolute inset-0 bg-amber-500/5 group-hover:bg-amber-500/10 transition"></div>
+                                            <div className="p-2 bg-stone-900 rounded-full border border-stone-700">
+                                                <div className="text-yellow-500">💰</div>
+                                            </div>
+                                            <span className="text-stone-400 text-[10px] font-bold uppercase tracking-wider">金币</span>
+                                            <span className="text-xl font-bold text-yellow-400">+{battleResult.rewards?.gold}</span>
                                         </div>
-                                        <span className="text-stone-400 text-[10px] font-bold uppercase tracking-wider">金币</span>
-                                        <span className="text-xl font-bold text-yellow-400">+{battleResult.rewards?.gold}</span>
-                                    </div>
-                                    <div className="bg-stone-800/80 border border-blue-500/30 rounded-lg p-3 flex flex-col items-center gap-1 relative overflow-hidden group">
-                                        <div className="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition"></div>
-                                        <div className="p-2 bg-stone-900 rounded-full border border-stone-700">
-                                            <div className="text-blue-500">✨</div>
+                                        <div className="bg-stone-800/80 border border-blue-500/30 rounded-lg p-3 flex flex-col items-center gap-1 relative overflow-hidden group">
+                                            <div className="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition"></div>
+                                            <div className="p-2 bg-stone-900 rounded-full border border-stone-700">
+                                                <div className="text-blue-500">✨</div>
+                                            </div>
+                                            <span className="text-stone-400 text-[10px] font-bold uppercase tracking-wider">经验</span>
+                                            <span className="text-xl font-bold text-blue-300">+{battleResult.rewards?.exp}</span>
                                         </div>
-                                        <span className="text-stone-400 text-[10px] font-bold uppercase tracking-wider">经验</span>
-                                        <span className="text-xl font-bold text-blue-300">+{battleResult.rewards?.exp}</span>
                                     </div>
+
+                                    {/* Level Up Notifications */}
+                                    {battleResult.levelUps && battleResult.levelUps.length > 0 && (
+                                        <div className="animate-fade-in-up w-full">
+                                            <div className="text-center text-xs text-amber-500 font-bold mb-2 tracking-wider uppercase">--- 武将升级 ---</div>
+                                            <div className="space-y-2 max-h-32 overflow-y-auto">
+                                                {battleResult.levelUps.map((u, idx) => (
+                                                    <div key={idx} className="bg-gradient-to-r from-stone-800 via-amber-900/20 to-stone-800 border border-amber-500/30 rounded p-2 flex justify-between items-center text-sm">
+                                                        <span className="font-bold text-amber-200">{u.name}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-stone-400 text-xs">Lv.{u.from}</span>
+                                                            <ArrowUpCircle size={14} className="text-green-400 animate-bounce"/>
+                                                            <span className="text-green-400 font-bold text-lg">Lv.{u.to}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="bg-stone-800/50 rounded-lg p-4 mb-8 border border-stone-700/50 text-center w-full">

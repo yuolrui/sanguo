@@ -112,13 +112,49 @@ app.get('/api/user/collection', authenticateToken, async (req, res) => {
     const db = getDB();
     const userId = req.user.id;
     
+    // Get owned generals
     const ownedGenerals = await db.all('SELECT DISTINCT general_id FROM user_generals WHERE user_id = ?', [userId]);
-    const ownedEquipments = await db.all('SELECT DISTINCT equipment_id FROM user_equipments WHERE user_id = ?', [userId]);
+    
+    // Get owned equipments and who they are assigned to
+    const ownedEquipments = await db.all('SELECT equipment_id, general_id FROM user_equipments WHERE user_id = ?', [userId]);
+    
+    // Map assignments: equipment_id -> [General Name 1, General Name 2]
+    // Note: equipment_id refers to the 'type' of equipment, multiple instances can exist.
+    // We need to join with user_generals and generals to get names.
+    const assignmentsRaw = await db.all(`
+        SELECT ue.equipment_id, g.name as general_name
+        FROM user_equipments ue
+        JOIN user_generals ug ON ue.general_id = ug.id
+        JOIN generals g ON ug.general_id = g.id
+        WHERE ue.user_id = ? AND ue.general_id IS NOT NULL
+    `, [userId]);
+
+    const assignments = {};
+    assignmentsRaw.forEach(row => {
+        if (!assignments[row.equipment_id]) assignments[row.equipment_id] = [];
+        assignments[row.equipment_id].push(row.general_name);
+    });
     
     res.json({
         generalIds: ownedGenerals.map(r => r.general_id),
-        equipmentIds: ownedEquipments.map(r => r.equipment_id)
+        equipmentIds: ownedEquipments.map(r => r.equipment_id),
+        assignments: assignments
     });
+});
+
+// Get All User Specific Items (Inventory)
+app.get('/api/user/items', authenticateToken, async (req, res) => {
+    const db = getDB();
+    const items = await db.all(`
+        SELECT ue.id, e.name, e.type, e.stars, e.stat_bonus, g.name as equipped_by
+        FROM user_equipments ue
+        JOIN equipments e ON ue.equipment_id = e.id
+        LEFT JOIN user_generals ug ON ue.general_id = ug.id
+        LEFT JOIN generals g ON ug.general_id = g.id
+        WHERE ue.user_id = ?
+        ORDER BY e.stars DESC, e.stat_bonus DESC
+    `, [req.user.id]);
+    res.json(items);
 });
 
 // Helper for Gacha Logic
@@ -308,8 +344,9 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
   const campaign = await db.get('SELECT * FROM campaigns WHERE id = ?', [campaignId]);
   
   // Calculate user power (Base + Evolution + Equipment)
+  // IMPORTANT: Fetch current EXP and Level to process leveling
   const team = await db.all(`
-    SELECT ug.id, g.name, g.country, g.str, g.int, g.ldr, ug.level, ug.evolution 
+    SELECT ug.id, g.name, g.country, g.str, g.int, g.ldr, ug.level, ug.exp, ug.evolution 
     FROM user_generals ug 
     JOIN generals g ON ug.general_id = g.id 
     WHERE ug.user_id = ? AND ug.is_in_team = 1`, [req.user.id]);
@@ -373,6 +410,34 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
   if (win) {
     await db.run('UPDATE users SET gold = gold + ? WHERE id = ?', [campaign.gold_drop, req.user.id]);
     
+    // --- LEVEL UP LOGIC ---
+    const expGain = campaign.exp_drop;
+    const levelUps = [];
+
+    for (const g of team) {
+        let newExp = g.exp + expGain;
+        let newLevel = g.level;
+        let didLevelUp = false;
+
+        // Formula: Level * 100 exp required for next level
+        let reqExp = newLevel * 100;
+
+        while (newExp >= reqExp) {
+            newExp -= reqExp;
+            newLevel++;
+            didLevelUp = true;
+            reqExp = newLevel * 100; // Recalculate for next level if multi-level up
+        }
+
+        // Update DB
+        await db.run('UPDATE user_generals SET level = ?, exp = ? WHERE id = ?', [newLevel, newExp, g.id]);
+
+        if (didLevelUp) {
+            levelUps.push({ name: g.name, from: g.level, to: newLevel });
+        }
+    }
+    // --- END LEVEL UP LOGIC ---
+
     // Chance to drop equipment (20%)
     if (Math.random() < 0.2) {
         const eqPool = await db.all('SELECT * FROM equipments WHERE stars <= 3'); // Low level drop
@@ -383,7 +448,13 @@ app.post('/api/battle/:id', authenticateToken, async (req, res) => {
     }
 
     await db.run(`INSERT OR REPLACE INTO user_campaign_progress (user_id, campaign_id, stars) VALUES (?, ?, 3)`, [req.user.id, campaignId]);
-    res.json({ win: true, rewards: { gold: campaign.gold_drop, exp: campaign.exp_drop } });
+    
+    // Return rewards including level ups
+    res.json({ 
+        win: true, 
+        rewards: { gold: campaign.gold_drop, exp: campaign.exp_drop },
+        levelUps 
+    });
   } else {
     res.json({ win: false });
   }
